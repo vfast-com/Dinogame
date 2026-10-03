@@ -1,0 +1,2782 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>T-Rex Live – Khủng long tương tác TikTok</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+/* =========================================================
+   T-REX LIVE – giao diện điều khiển (tông tối kiểu phòng stream)
+   ========================================================= */
+:root {
+  --bg: #0e1016;
+  --panel: #161a24;
+  --panel-2: #1d2230;
+  --line: #2a3142;
+  --text: #e9edf5;
+  --muted: #8d97ab;
+  --cyan: #25f4ee;
+  --pink: #fe2c55;
+  --green: #3ddc84;
+  --amber: #ffb547;
+  --red: #ff5d6c;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(37, 244, 238, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(254, 44, 85, 0.08), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Baloo 2", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+}
+
+/* ---------- Thanh trên ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(14, 16, 22, 0.85);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { font-size: 28px; filter: drop-shadow(0 2px 6px rgba(37, 244, 238, 0.35)); }
+.brand h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.2px; }
+.brand h1 em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.connect { display: flex; gap: 8px; flex: 1 1 380px; max-width: 560px; min-width: 0; }
+
+.input-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-wrap:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(37, 244, 238, 0.15); }
+.input-wrap .at { color: var(--muted); font-weight: 700; margin-right: 4px; }
+.input-wrap input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  padding: 9px 0;
+}
+
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: progress; }
+.btn-primary { background: linear-gradient(135deg, var(--pink), #ff5f7e); color: #fff; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn-ghost:hover { border-color: var(--muted); }
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 100%;
+}
+.status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46ch; }
+.status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-state="connected"] { color: var(--text); border-color: rgba(61, 220, 132, 0.4); }
+.status[data-state="connected"] .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.status[data-state="connecting"] .dot,
+.status[data-state="reconnecting"] .dot { background: var(--amber); animation: pulse 1s infinite; }
+.status[data-state="error"] { border-color: rgba(255, 93, 108, 0.45); color: #ffc2c8; }
+.status[data-state="error"] .dot,
+.status[data-state="offline"] .dot { background: var(--red); }
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* ---------- Bố cục ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  padding: 18px 20px 28px;
+  align-items: start;
+}
+
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 960 / 400;
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.hint { color: var(--muted); font-size: 14px; margin: 10px 2px 0; }
+.hint kbd, .hint code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--text);
+}
+
+.side { display: flex; flex-direction: column; gap: 14px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Bảng quà */
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.legend li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.legend .emo { grid-row: span 2; font-size: 24px; text-align: center; }
+.legend .label { font-weight: 800; }
+.legend .names { color: var(--muted); font-size: 13px; line-height: 1.3; }
+
+.legend .legend-head {
+  display: block;
+  background: transparent;
+  padding: 8px 2px 0;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.legend .legend-head:first-child { padding-top: 0; }
+
+.btn-small { padding: 6px 12px; font-size: 13px; margin-bottom: 12px; }
+
+/* Ô quà bấm được */
+.legend li.clickable { cursor: pointer; user-select: none; transition: background 0.12s, transform 0.08s; }
+.legend li.clickable:hover { background: #252b3b; }
+.legend li.clickable:active { transform: scale(0.98); }
+.legend li.clickable:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.legend li.pressed { animation: pressed 0.45s ease-out; }
+@keyframes pressed { 0% { background: rgba(37, 244, 238, 0.35); } 100% { background: var(--panel-2); } }
+.h2-note { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); opacity: 0.8; }
+.btn-small { margin-right: 6px; }
+
+/* Skin */
+.skins { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.skins button {
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+  border: 3px solid var(--panel-2); box-shadow: 0 0 0 1px var(--line);
+}
+.skins button.active { box-shadow: 0 0 0 3px var(--cyan); }
+.file-btn { display: inline-flex; align-items: center; cursor: pointer; }
+.skin-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; line-height: 1.4; }
+
+/* Nút giả lập */
+.sim { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sim button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.sim button:hover { border-color: var(--cyan); }
+
+/* Công tắc bot */
+.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text); font-size: 14px; }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle .track {
+  width: 40px; height: 22px; border-radius: 999px; background: var(--line);
+  position: relative; transition: background 0.15s; flex: none;
+}
+.toggle .thumb {
+  position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform 0.15s;
+}
+.toggle input:checked + .track { background: var(--cyan); }
+.toggle input:checked + .track .thumb { transform: translateX(18px); }
+.toggle input:focus-visible + .track { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.bot-level {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 12px; font-size: 14px; color: var(--muted);
+}
+.bot-level select {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 14px;
+}
+
+/* Nhật ký */
+.link-btn {
+  background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px;
+  letter-spacing: 0; text-transform: none; cursor: pointer;
+}
+.link-btn:hover { color: var(--text); }
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.log li {
+  font-size: 14px;
+  line-height: 1.35;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--line);
+  animation: slideIn 0.2s ease-out;
+  overflow-wrap: anywhere;
+}
+.log time { color: var(--muted); font-family: "JetBrains Mono", monospace; font-size: 11px; margin-right: 6px; }
+.log li.gift { border-left-color: var(--pink); }
+.log li.success { border-left-color: var(--green); }
+.log li.helmet { border-left-color: var(--amber); }
+.log li.help { border-left-color: var(--green); }
+.log li.troll { border-left-color: var(--red); }
+.log li.special { border-left-color: var(--amber); }
+.log li.warn { border-left-color: var(--amber); color: #ffe2b0; }
+.log li.error { border-left-color: var(--red); color: #ffc2c8; }
+.log li.muted { color: var(--muted); }
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(-4px); } }
+
+/* ---------- Toàn màn hình ---------- */
+.canvas-wrap { position: relative; }
+.fs-btn {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 3;
+  border: 0; border-radius: 999px; padding: 6px 12px;
+  background: rgba(20, 24, 33, 0.72); color: #fff;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.fs-btn:hover { background: rgba(20, 24, 33, 0.9); }
+/* Fullscreen thật (Android, máy tính) và "giả fullscreen" (iPhone không hỗ trợ API) */
+.canvas-wrap:fullscreen,
+.canvas-wrap.pseudo-fs {
+  display: flex; align-items: center; justify-content: center;
+  background: #000; width: 100vw; height: 100vh;
+}
+.canvas-wrap.pseudo-fs { position: fixed; inset: 0; z-index: 1000; height: 100dvh; }
+.canvas-wrap:fullscreen canvas,
+.canvas-wrap.pseudo-fs canvas {
+  width: min(100vw, calc(100vh * 2.4));
+  height: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+.canvas-wrap:fullscreen .fs-btn,
+.canvas-wrap.pseudo-fs .fs-btn { opacity: 0.55; }
+body.no-scroll { overflow: hidden; }
+
+/* ---------- Nút điều khiển trên màn hình ---------- */
+.touch-controls {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: clamp(6px, 1.6vw, 14px);
+  pointer-events: none;
+}
+.tc-group { display: flex; gap: clamp(6px, 1.4vw, 12px); align-items: flex-end; pointer-events: auto; }
+.tc-btn {
+  --size: clamp(38px, 7vw, 62px);
+  width: var(--size); height: var(--size);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: rgba(20, 24, 33, 0.45);
+  color: #fff;
+  font-size: calc(var(--size) * 0.36);
+  line-height: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.06s, background 0.1s;
+}
+.tc-btn.active { background: rgba(37, 244, 238, 0.55); transform: scale(0.92); }
+.tc-jump { --size: clamp(52px, 10vw, 86px); background: rgba(254, 44, 85, 0.55); }
+.tc-duck { --size: clamp(52px, 10vw, 86px); }
+.tc-jump small, .tc-duck small { font-size: 0.42em; font-weight: 800; letter-spacing: 0.5px; margin-top: 2px; }
+.canvas-wrap.hide-controls .touch-controls { display: none; }
+.tc-move { --size: clamp(52px, 10vw, 86px); background: rgba(61, 220, 132, 0.45); }
+.tc-move small { font-size: 0.42em; font-weight: 800; margin-top: 2px; }
+.tc-move, .tc-manual-only { display: none; }
+.canvas-wrap.manual-run .tc-move,
+.canvas-wrap.manual-run .tc-manual-only { display: flex; }
+.canvas-wrap.manual-run .tc-auto-only { display: none; }
+
+/* Nút Auto Run */
+.btn-auto {
+  display: block; width: 100%; padding: 10px 14px; margin-bottom: 12px;
+  font-size: 16px; background: var(--panel-2); color: var(--text); border: 2px solid var(--green);
+}
+.btn-auto.on { background: var(--green); color: #0e1016; }
+#autoMoveBtn { border-color: var(--cyan); }
+#autoMoveBtn.on { background: var(--cyan); }
+
+/* ---------- Màn hình hẹp ---------- */
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; padding: 14px 16px 24px; }
+  .topbar { padding: 12px 16px; }
+  .connect { flex-basis: 100%; max-width: none; }
+}
+
+/* ---------- Chế độ OBS: ?overlay=1 (chỉ còn khung game) ---------- */
+body.overlay { background: transparent; }
+body.overlay .topbar,
+body.overlay .side,
+body.overlay .hint,
+body.overlay .touch-controls,
+body.overlay .fs-btn { display: none; }
+body.overlay .layout { display: block; padding: 0; }
+body.overlay .stage canvas { border-radius: 0; box-shadow: none; }
+
+</style>
+</head>
+<body>
+  <!-- ===== Thanh trên: nhập username + kết nối ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🦖</span>
+      <h1>T-Rex <em>Live</em></h1>
+    </div>
+
+    <form id="connectForm" class="connect" autocomplete="off">
+      <label class="input-wrap" for="usernameInput">
+        <span class="at">@</span>
+        <input id="usernameInput" type="text" placeholder="username TikTok đang live" spellcheck="false" />
+      </label>
+      <button type="submit" id="connectBtn" class="btn btn-primary">Kết nối</button>
+      <button type="button" id="disconnectBtn" class="btn btn-ghost" hidden>Ngắt</button>
+    </form>
+
+    <div id="statusPill" class="status" data-state="idle" role="status">
+      <i class="dot"></i><span id="statusText">Chưa kết nối</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ===== Màn hình game ===== -->
+    <section class="stage">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gameCanvas" aria-label="Game khủng long chạy vô tận"></canvas>
+        <button type="button" id="fullscreenBtn" class="fs-btn" title="Toàn màn hình (phím F)">⛶ Toàn màn hình</button>
+        <!-- Nút điều khiển trên màn hình.
+             Tự động chạy BẬT : trái = CÚI, phải = NHẢY
+             Tự động chạy TẮT : trái = ◀ LÙI ▶ TIẾN, phải = CÚI + NHẢY -->
+        <div class="touch-controls" id="touchControls">
+          <div class="tc-group">
+            <button type="button" class="tc-btn tc-duck tc-auto-only" data-act="duck" aria-label="Cúi">▼<small>CÚI</small></button>
+            <button type="button" class="tc-btn tc-move" data-act="left" aria-label="Lùi">◀<small>LÙI</small></button>
+            <button type="button" class="tc-btn tc-move" data-act="right" aria-label="Tiến">▶<small>TIẾN</small></button>
+          </div>
+          <div class="tc-group">
+            <button type="button" class="tc-btn tc-duck tc-manual-only" data-act="duck" aria-label="Cúi">▼<small>CÚI</small></button>
+            <button type="button" class="tc-btn tc-jump" data-act="jump" aria-label="Nhảy">▲<small>NHẢY</small></button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">
+        <kbd>Space</kbd>/<kbd>↑</kbd> nhảy · <kbd>↓</kbd> cúi · <kbd>←</kbd><kbd>→</kbd> lùi/tiến (khi tắt tự động chạy) · <kbd>F</kbd> toàn màn hình · chạm màn hình để nhảy ·
+        thêm <code>?overlay=1</code> vào URL để dùng làm nguồn OBS
+      </p>
+    </section>
+
+    <!-- ===== Cột bên: bảng quà, giả lập, log ===== -->
+    <aside class="side">
+      <div class="card">
+        <h2>Quà tặng &amp; hiệu ứng <span class="h2-note">chạm để thử</span></h2>
+        <ul id="giftLegend" class="legend"></ul>
+      </div>
+
+      <div class="card" id="simCard">
+        <h2>Thử nghiệm (giả lập quà) <button type="button" id="hideSimBtn" class="link-btn">Xoá</button></h2>
+        <div id="simButtons" class="sim"></div>
+      </div>
+
+      <div class="card">
+        <h2>Skin khủng long</h2>
+        <div id="skinSwatches" class="skins"></div>
+        <label class="btn btn-ghost btn-small file-btn">🖼️ Tải ảnh lên<input type="file" id="skinFile" accept="image/*" hidden /></label>
+        <button type="button" id="skinClear" class="btn btn-ghost btn-small" hidden>✕ Bỏ ảnh</button>
+        <label class="toggle">
+          <input type="checkbox" id="skinFlip" />
+          <span class="track"><span class="thumb"></span></span>
+          Lật ngang ảnh
+        </label>
+        <p class="skin-note">Ảnh gì cũng được. Đẹp nhất là PNG nền trong suốt, nhân vật quay mặt sang phải.</p>
+      </div>
+
+      <div class="card">
+        <h2>Điều khiển &amp; Bot</h2>
+        <button type="button" id="autoMoveBtn" class="btn btn-auto on">🏃 Tự động chạy: BẬT</button>
+        <button type="button" id="autoRunBtn" class="btn btn-auto">▶ Auto Run</button>
+        <button type="button" id="resetProgressBtn" class="btn btn-ghost btn-small">↺ Đặt lại win &amp; mét</button>
+        <button type="button" id="showSimBtn" class="btn btn-ghost btn-small" hidden>＋ Hiện lại phần Thử nghiệm</button>
+        <label class="toggle">
+          <input type="checkbox" id="controlsToggle" checked />
+          <span class="track"><span class="thumb"></span></span>
+          Hiện nút điều khiển trên màn hình
+        </label>
+        <label class="bot-level">Độ giỏi của bot
+          <select id="botLevel">
+            <option value="0.1">Hay vấp (quà rất có ích)</option>
+            <option value="0.04" selected>Bình thường</option>
+            <option value="0.015">Giỏi</option>
+            <option value="0">Bất bại</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card log-card">
+        <h2>Nhật ký <button type="button" id="clearLogBtn" class="link-btn">Xoá</button></h2>
+        <ol id="log" class="log" aria-live="polite"></ol>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Socket.io client (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+  <script>
+/* ======================================================================
+ *  T-REX LIVE — game.js
+ *  Game khủng long chạy vô tận (HTML5 Canvas + JavaScript thuần)
+ *  nhận quà tặng TikTok LIVE theo thời gian thực qua Socket.io.
+ *
+ *  MỤC LỤC
+ *    1. CONFIG ........... thông số game & hiệu ứng quà
+ *    2. GIFT_RULES ....... bảng "tên quà TikTok" -> "hành động"   (sửa ở đây)
+ *    3. GIFT_ACTIONS ..... code của từng hành động                 (thêm ở đây)
+ *    4. Canvas & tiện ích vẽ
+ *    5. Khủng long (Dino)
+ *    6. Vật cản: xương rồng & chim
+ *    7. VA CHẠM .......... logic Mũ bảo hiểm nằm ở đây
+ *    8. Trạng thái & vòng lặp game
+ *    9. Vẽ khung hình (render)
+ *   10. Điều khiển (bàn phím / chạm) + Bot tự chơi
+ *   11. SOCKET.IO ........ handleGiftEvent(): nhận quà từ server
+ *   12. Giao diện: log, trạng thái kết nối, nút bấm
+ *   13. HIỆU ỨNG ĐIỆN ẢNH: +WIN / -WIN / NUKE
+ * ====================================================================== */
+'use strict';
+
+/* ======================================================================
+ * 1. CONFIG – THÔNG SỐ GAME
+ * ==================================================================== */
+const CONFIG = {
+  WIDTH: 960,             // kích thước logic của canvas (tự co giãn theo màn hình)
+  HEIGHT: 400,
+  GROUND_Y: 360,          // toạ độ y của mặt đất (chân khủng long chạm ở đây)
+  FPS: 60,                // logic chạy cố định 60 bước/giây (mượt cả trên màn 144Hz)
+
+  // --- Khủng long ---
+  DINO_X: 175,            // vị trí khủng long nhỏ (chừa chỗ cho nút CÚI và con khủng long xanh)
+  GRAVITY: 0.9,
+  JUMP_VELOCITY: 14.7,    // ~ nhảy cao 115px
+  MIN_JUMP_HEIGHT: 40,    // nhả phím sớm vẫn nhảy tối thiểu chừng này
+  DROP_VELOCITY: 5,       // vận tốc còn lại khi nhả phím sớm (nhảy thấp)
+  FAST_FALL_FACTOR: 2.6,  // giữ ↓ khi đang bay => rơi nhanh hơn
+
+  // --- Tốc độ & điểm ---
+  SPEED_START: 9,
+  SPEED_MAX: 20,
+  ACCELERATION: 0.0015,   // tốc độ tăng mỗi khung hình
+  METERS_PER_PX: 0.0185,  // số mét nhận được cho mỗi pixel chạy được (~10m/giây lúc đầu)
+
+  // --- Vật cản ---
+  GAP_COEFFICIENT: 0.6,
+  MAX_OBSTACLE_DUPLICATION: 2,  // không quá 2 vật cản cùng loại liên tiếp
+  FIRST_OBSTACLE_DELAY: 60,     // số khung hình chạy "an toàn" đầu mỗi lượt
+
+  // --- Quà: Mũ bảo hiểm ---
+  HELMET_MAX: 1,                // số mũ tối đa cùng lúc (tăng lên để cho phép "xếp chồng" mũ)
+  HELMET_PROTECTS: 'all',       // 'all' = đỡ mọi va chạm | 'head' = chỉ đỡ khi va ĐẦU
+  HELMET_GRACE_FRAMES: 10,      // ~0.17s miễn nhiễm sau khi mũ vỡ (tránh chết oan khung hình kế tiếp)
+
+  // --- Quà: Siêu nhảy (Kem) ---
+  SUPER_JUMP_MULTIPLIER: 2,     // độ cao nhảy x2 (thời gian bay giữ nguyên => không bị lệch nhịp)
+  SUPER_JUMP_SECONDS: 8,        // mỗi quà cộng thêm 8 giây
+  SUPER_JUMP_MAX_SECONDS: 60,
+
+  // --- Quà: Tăng tốc (quà "troll") ---
+  SPEED_BOOST_AMOUNT: 4,
+  SPEED_BOOST_SECONDS: 5,
+  SPEED_BOOST_MAX_SECONDS: 30,
+
+  // --- Hồi sinh & tự chơi lại ---
+  REVIVE_INVINCIBLE_SECONDS: 1.5,
+  AUTO_RESTART_SECONDS: 4,      // 0 = tắt tự chơi lại sau Game Over
+
+  // --- Thả tim (like) ---
+  LIKES_PER_HELMET: 0,          // 0 = tắt. VD 100 => cứ 100 lượt thả tim tặng 1 Mũ bảo hiểm
+
+  // --- Chế độ tự động chơi (bot) ---
+  AUTO_MOVE: true,              // true = khủng long tự chạy | false = phải giữ ◀ / ▶ để đi
+  AUTO_PLAY: false,             // true = mở game là bot tự chơi luôn (hoặc thêm ?bot=1 vào link)
+  MOVE_SPEED: 4,                // tốc độ đi tiến / lùi bằng nút (px mỗi khung hình)
+  DINO_X_MANUAL: 290,           // vị trí khủng long khi TẮT tự động chạy (chừa chỗ cho nút ◀ ▶)
+  DINO_MIN_X: 8,                // giới hạn đi lùi
+  DINO_MAX_X: 520,              // giới hạn đi tiến
+  BOT_MISS_CHANCE: 0.04,        // xác suất bot "lơ đãng" bỏ qua 1 vật cản (để quà có giá trị)
+
+  // --- Mét & Win ---
+  WIN_DISTANCE: 1000,           // chạy đủ 1000m => +1 win (mét dư được giữ lại)
+  DEATH_RESETS_METERS: true,    // chết => mét về 0
+  DEATH_WIN_PENALTY: 1,         // chết => trừ 1 win (0 = không trừ)
+  NEGATIVE_METERS_BORROW_WIN: false, // false: bị kéo lùi quá số mét đang có thì dừng ở 0m
+                                     // true : trừ sang win (-1 win, cộng lại 1000m)
+  ALLOW_NEGATIVE_WINS: true,    // cho phép win âm
+  PUSH_MAX_EXTRA_SPEED: 40,     // màn hình cuộn nhanh thêm tối đa bao nhiêu khi đang được "đẩy"
+
+  // --- Vòng quay may mắn ---
+  WHEEL_SPIN_SECONDS: 3.2,
+  WHEEL_RESULT_SECONDS: 1.4,
+};
+
+/* ======================================================================
+ * 2. GIFT_RULES – BẢNG ÁNH XẠ QUÀ TẶNG -> HÀNH ĐỘNG
+ *    - group : 'help' (GIÚP) | 'troll' (PHÁ) | 'special' (ĐẶC BIỆT) – để chia cột hiển thị
+ *    - names : tên quà, không phân biệt hoa/thường. TikTok thường gửi tên TIẾNG ANH.
+ *              Tên chính xác xem trong terminal của server:  [Gift] ... tặng "Tên quà"
+ *    - ids   : (tuỳ chọn) giftId, dùng khi tên quà bị đổi theo ngôn ngữ
+ *    - action: tên hàm trong GIFT_ACTIONS ; value: tham số cho hàm đó
+ * ==================================================================== */
+const GIFT_GROUPS = {
+  help: { title: '🟢 GIÚP', color: '#3ddc84' },
+  troll: { title: '🔴 PHÁ', color: '#ff5d6c' },
+  special: { title: '🎡 ĐẶC BIỆT', color: '#ffb547' },
+};
+
+// Các ô của vòng quay. type: 'meters' (value = số mét, âm = kéo lùi)
+//                         | 'helmet' | 'superJump' | 'speedBoost' (value = số giây)
+const WHEEL_DONUT = [
+  { type: 'meters', value: 10 }, { type: 'meters', value: -10 },
+  { type: 'meters', value: 100 }, { type: 'meters', value: -100 },
+  { type: 'meters', value: 200 }, { type: 'meters', value: -200 },
+  { type: 'meters', value: 1000 }, { type: 'meters', value: -1000 },
+  { type: 'helmet', value: 10 }, { type: 'superJump', value: 10 }, { type: 'speedBoost', value: 15 },
+];
+const WHEEL_TEAM_HEART = [
+  { type: 'meters', value: 10 }, { type: 'meters', value: -10 },
+  { type: 'meters', value: 20 }, { type: 'meters', value: -20 },
+  { type: 'meters', value: 100 }, { type: 'meters', value: -100 },
+  { type: 'helmet', value: 2 }, { type: 'superJump', value: 2 }, { type: 'speedBoost', value: 3 },
+];
+
+const GIFT_RULES = [
+  // ---------- GIÚP: đẩy lên (trong lúc đẩy đâm xương rồng KHÔNG chết) ----------
+  { group: 'help', names: ['GG'], ids: [], action: 'meters', value: 10, emoji: '👍', label: 'Đẩy +10m' },
+  { group: 'help', names: ['Lucky Pig', 'Chú heo may mắn'], ids: [], action: 'meters', value: 100, emoji: '🐷', label: 'Đẩy +100m' },
+  { group: 'help', names: ['Perfume', 'Nước hoa'], ids: [], action: 'meters', value: 200, emoji: '🧴', label: 'Đẩy +200m' },
+  { group: 'help', names: ['Hat and Mustache', 'Mũ và ria mép'], ids: [], action: 'meters', value: 1000, emoji: '🎩', label: 'Đẩy +1000m' },
+  { group: 'help', names: ['Galaxy', 'Thiên hà'], ids: [], action: 'wins', value: 1, emoji: '🌌', label: '+1 WIN' },
+  { group: 'help', names: ['Diamond Gun', 'Súng kim cương'], ids: [], action: 'wins', value: 10, emoji: '💎', label: '+10 WIN' },
+
+  // ---------- PHÁ: kéo lùi / trừ win ----------
+  { group: 'troll', names: ['Rose', 'Hoa hồng'], ids: [], action: 'meters', value: -10, emoji: '🌹', label: 'Lùi -10m' },
+  { group: 'troll', names: ['Rosa'], ids: [], action: 'meters', value: -100, emoji: '💐', label: 'Lùi -100m' },
+  { group: 'troll', names: ['Little Kisses', 'Little Kiss'], ids: [], action: 'meters', value: -200, emoji: '💋', label: 'Lùi -200m' },
+  { group: 'troll', names: ['Heart', 'Thả tim'], ids: [], action: 'meters', value: -1000, emoji: '❤️', label: 'Lùi -1000m' },
+  { group: 'troll', names: ['Fireworks', 'Pháo hoa'], ids: [], action: 'wins', value: -1, emoji: '🎆', label: '-1 WIN' },
+  { group: 'troll', names: ['Jet', 'Private Jet', 'Máy bay phản lực'], ids: [], action: 'wins', value: -10, emoji: '✈️', label: '-10 WIN' },
+
+  // ---------- ĐẶC BIỆT ----------
+  {
+    group: 'special', names: ['Doughnut', 'Donut', 'Bánh vòng'], ids: [], action: 'wheel', wheel: WHEEL_DONUT,
+    emoji: '🍩', label: 'Vòng quay lớn', description: '±10/100/200/1000m, mũ 10s, nhảy cao 10s, tăng tốc 15s',
+  },
+  {
+    group: 'special', names: ['Team Heart', 'Tim đội'], ids: [], action: 'wheel', wheel: WHEEL_TEAM_HEART,
+    emoji: '💞', label: 'Vòng quay nhỏ', description: '±10/20/100m, mũ 2s, nhảy cao 2s, tăng tốc 3s',
+  },
+  {
+    group: 'special', names: ['Lion', 'Sư tử'], ids: [], action: 'nuke',
+    emoji: '🦁', label: 'NUKE – RIP PC', description: 'Nổ tung màn hình: mét = 0, win = 0',
+  },
+];
+
+/* ======================================================================
+ * 3. GIFT_ACTIONS – CÁC HÀNH ĐỘNG KHI NHẬN QUÀ
+ *    Mỗi hàm nhận (game, gift, rule): gift.count = số quà, rule.value = tham số trong GIFT_RULES.
+ *    Hàm TRẢ VỀ một câu mô tả để ghi vào log.
+ * ==================================================================== */
+const GIFT_ACTIONS = {
+  /** Đẩy lên (value > 0) hoặc kéo lùi (value < 0): tổng = value x số quà */
+  meters(game, gift, rule) {
+    const total = rule.value * gift.count;
+    return total >= 0 ? pushForward(total) : pullBack(-total);
+  },
+
+  /** Cộng / trừ win trực tiếp */
+  wins(game, gift, rule) {
+    const delta = rule.value * gift.count;
+    const who = shortName(String(gift.sender || 'Ẩn danh'));
+    changeWins(delta, { label: `@${who} tặng ${gift.count > 1 ? `${gift.count} ` : ''}${gift.giftName || ''}` });
+    return `${delta > 0 ? '+' : ''}${delta} WIN! (tổng ${game.wins} win)`;
+  },
+
+  /** Vòng quay may mắn: mỗi quà = 1 lượt quay, xếp hàng quay lần lượt */
+  wheel(game, gift, rule) {
+    const spins = Math.min(gift.count, 20);
+    for (let i = 0; i < spins; i++) queueWheel(rule, gift.sender);
+    return spins > 1 ? `Quay vòng may mắn x${spins}!` : 'Quay vòng may mắn!';
+  },
+
+  /** Sư tử: nổ tung, xoá sạch mét và win */
+  nuke(game, gift) {
+    nukeEverything(gift.sender);
+    return '☢️ Phóng tên lửa hạt nhân! 3… 2… 1… RIP PC';
+  },
+
+  /** Mũ bảo hiểm TÍNH GIỜ: trong thời gian này đâm vật cản nào thì vật cản đó vỡ */
+  helmetTimed(game, gift, rule) {
+    const s = addTimedEffect('helmet', (rule.value ?? 10) * gift.count);
+    return `Mũ bảo hiểm ${s}s!`;
+  },
+
+  /** Nhảy cao gấp SUPER_JUMP_MULTIPLIER lần trong value giây */
+  superJump(game, gift, rule) {
+    const s = addTimedEffect('superJump', (rule.value ?? CONFIG.SUPER_JUMP_SECONDS) * gift.count);
+    return `Nhảy cao x${CONFIG.SUPER_JUMP_MULTIPLIER} (${s}s)!`;
+  },
+
+  /** Tăng tốc trong value giây */
+  speedBoost(game, gift, rule) {
+    const s = addTimedEffect('speedBoost', (rule.value ?? CONFIG.SPEED_BOOST_SECONDS) * gift.count);
+    return `Tăng tốc ${s}s!`;
+  },
+
+  /** Mũ bảo hiểm 1 LẦN (đỡ 1 cú va chạm rồi vỡ) – hiện chưa gán quà, giữ lại để bạn dùng */
+  helmet(game, gift) {
+    const dino = game.dino;
+    const before = dino.helmets;
+    dino.helmets = Math.min(CONFIG.HELMET_MAX, before + gift.count);
+    if (dino.helmets === before) return 'Khủng long đã đội Mũ bảo hiểm rồi!';
+    dino.helmetPop = 24;
+    return 'Kích hoạt Mũ bảo hiểm!';
+  },
+
+  /** Hồi sinh khi vừa Game Over – hiện chưa gán quà, giữ lại để bạn dùng */
+  revive(game, gift) {
+    if (game.state !== 'over') return `Khủng long còn sống → ${GIFT_ACTIONS.helmet(game, gift)}`;
+    reviveDino();
+    return 'Khủng long được HỒI SINH!';
+  },
+};
+
+/* ======================================================================
+ * 4. CANVAS & TIỆN ÍCH
+ * ==================================================================== */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = CONFIG.WIDTH;
+const H = CONFIG.HEIGHT;
+const GROUND_Y = CONFIG.GROUND_Y;
+let dpr = 1;
+
+function resizeCanvas() {
+  // Vẽ theo mật độ điểm ảnh của màn hình để hình sắc nét (tối đa 2x cho nhẹ)
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const rand = (min, max) => min + Math.random() * (max - min);
+const randInt = (min, max) => Math.floor(rand(min, max + 1));
+const hash01 = (n) => {
+  const s = Math.sin(n * 12.9898) * 43758.5453;
+  return s - Math.floor(s);
+};
+const rectsOverlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+const FONT_UI = '"Baloo 2", system-ui, -apple-system, "Segoe UI", sans-serif';
+const FONT_MONO = '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace';
+const FONT_EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
+// Các hàm thêm hình vào path (dùng được cho cả Path2D và ctx)
+function addRoundRect(p, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  p.moveTo(x + r, y);
+  p.arcTo(x + w, y, x + w, y + h, r);
+  p.arcTo(x + w, y + h, x, y + h, r);
+  p.arcTo(x, y + h, x, y, r);
+  p.arcTo(x, y, x + w, y, r);
+  p.closePath();
+}
+function addTopRoundRect(p, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h);
+  p.moveTo(x, y + h);
+  p.lineTo(x, y + r);
+  p.arcTo(x, y, x + r, y, r);
+  p.lineTo(x + w - r, y);
+  p.arcTo(x + w, y, x + w, y + r, r);
+  p.lineTo(x + w, y + h);
+  p.closePath();
+}
+function addEllipse(p, cx, cy, rx, ry) {
+  p.moveTo(cx + rx, cy);
+  p.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  p.closePath();
+}
+function addPoly(p, pts) {
+  p.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) p.lineTo(pts[i][0], pts[i][1]);
+  p.closePath();
+}
+function shape(build) {
+  const p = new Path2D();
+  build(p);
+  return p;
+}
+/** Vẽ nhiều hình thành một khối có viền ngoài liền mạch: viền trước, tô sau */
+function paintShapes(c, shapes, fill, outline, lineWidth = 3) {
+  c.lineJoin = 'round';
+  c.lineWidth = lineWidth;
+  c.strokeStyle = outline;
+  for (const s of shapes) c.stroke(s);
+  c.fillStyle = fill;
+  for (const s of shapes) c.fill(s);
+}
+function fillEllipse(c, cx, cy, rx, ry, color) {
+  c.beginPath();
+  addEllipse(c, cx, cy, rx, ry);
+  c.fillStyle = color;
+  c.fill();
+}
+
+/* ======================================================================
+ * 5. KHỦNG LONG (DINO)
+ * ==================================================================== */
+const DINO_SIZE = { stand: { w: 66, h: 70 }, duck: { w: 88, h: 34 } };
+
+// Hộp va chạm, toạ độ tương đối với góc trên-trái của khủng long.
+// 'head' đứng ĐẦU danh sách để khi va nhiều chỗ cùng lúc thì ưu tiên ghi nhận là "va đầu".
+const DINO_HITBOXES = {
+  stand: [
+    { part: 'head', x: 36, y: 1, w: 29, h: 22 },
+    { part: 'body', x: 14, y: 22, w: 36, h: 30 },
+    { part: 'tail', x: 3, y: 24, w: 13, h: 12 },
+    { part: 'legs', x: 18, y: 50, w: 24, h: 19 },
+  ],
+  duck: [
+    { part: 'head', x: 58, y: 2, w: 28, h: 20 },
+    { part: 'body', x: 8, y: 8, w: 52, h: 24 },
+  ],
+};
+
+const DINO_COLORS = {
+  body: '#36c3a0',
+  bodyDark: '#259a7e',
+  outline: '#134f43',
+  belly: '#fbe9b7',
+  spike: '#ff7a59',
+  cheek: 'rgba(255, 120, 140, 0.6)',
+};
+
+/* ---------- SKIN khủng long nhỏ: chọn màu có sẵn hoặc tải ảnh bất kỳ ---------- */
+const CHEEK = 'rgba(255, 120, 140, 0.6)';
+const DINO_SKINS = {
+  teal: { name: 'Xanh ngọc', ...DINO_COLORS },
+  red: { name: 'Đỏ lửa', body: '#f0605d', bodyDark: '#cc4542', outline: '#6e1f1d', belly: '#ffe6b8', spike: '#ffd166', cheek: 'rgba(255,200,120,0.6)' },
+  purple: { name: 'Tím', body: '#9b7bf2', bodyDark: '#7c5bd6', outline: '#36246e', belly: '#efe6ff', spike: '#5ee0c7', cheek: CHEEK },
+  gold: { name: 'Vàng', body: '#f5c542', bodyDark: '#d9a521', outline: '#6b4a07', belly: '#fff4cf', spike: '#ff7a59', cheek: CHEEK },
+  pink: { name: 'Hồng', body: '#ff8fc0', bodyDark: '#e46ea3', outline: '#7a2350', belly: '#fff0f6', spike: '#7ad3ff', cheek: CHEEK },
+  black: { name: 'Đen', body: '#3b4252', bodyDark: '#2c313d', outline: '#0d0f14', belly: '#9aa3b5', spike: '#ff5d6c', cheek: 'rgba(255,93,108,0.5)' },
+};
+// Màu con khủng long TO lao vào húc khi bị kéo lùi
+const BULLY_COLORS = { body: '#8b2f3c', bodyDark: '#6e2230', outline: '#2b0b10', belly: '#f2b8a0', spike: '#ffcc33', cheek: 'rgba(255,77,77,0.55)' };
+const skin = { color: 'teal', image: null, imageData: null, flip: false };
+
+const dinoShapeCache = new Map();
+
+function getDinoShapes(pose, l0, l1) {
+  const key = `${pose}:${l0}:${l1}`;
+  if (dinoShapeCache.has(key)) return dinoShapeCache.get(key);
+  let s;
+  if (pose === 'stand') {
+    s = {
+      spikes: [
+        [[12, 31], [19, 30], [11, 21]],
+        [[19, 30], [26, 27], [20, 17]],
+        [[26, 27], [33, 27], [29, 15]],
+      ].map((pts) => shape((p) => addPoly(p, pts))),
+      back: [
+        shape((p) => addRoundRect(p, 18, 50, 9, 18 - l0, 3)),
+        shape((p) => addRoundRect(p, 18, 64 - l0, 13, 6, 3)),
+      ],
+      main: [
+        shape((p) => {
+          p.moveTo(22, 29);
+          p.quadraticCurveTo(8, 28, 1, 19);
+          p.quadraticCurveTo(4, 37, 22, 46);
+          p.closePath();
+        }),
+        shape((p) => addEllipse(p, 31, 40, 18, 15)),
+        shape((p) => addPoly(p, [[33, 34], [38, 12], [52, 14], [47, 38]])),
+        shape((p) => addRoundRect(p, 36, 0, 30, 21, 8)),
+        shape((p) => addRoundRect(p, 45, 16, 19, 8, 3)),
+        shape((p) => addPoly(p, [[43, 37], [53, 40], [52, 45], [43, 43]])),
+        shape((p) => addRoundRect(p, 33, 50, 9, 18 - l1, 3)),
+        shape((p) => addRoundRect(p, 33, 64 - l1, 13, 6, 3)),
+      ],
+    };
+  } else {
+    s = {
+      spikes: [
+        [[16, 13], [23, 9], [16, 3]],
+        [[23, 9], [31, 7], [25, 0]],
+        [[31, 7], [40, 7], [34, -1]],
+      ].map((pts) => shape((p) => addPoly(p, pts))),
+      back: [
+        shape((p) => addRoundRect(p, 22, 24, 9, 9 - l0, 3)),
+        shape((p) => addRoundRect(p, 22, 28 - l0, 12, 6, 3)),
+      ],
+      main: [
+        shape((p) => {
+          p.moveTo(18, 12);
+          p.quadraticCurveTo(6, 10, 0, 5);
+          p.quadraticCurveTo(5, 21, 18, 25);
+          p.closePath();
+        }),
+        shape((p) => addEllipse(p, 36, 18, 23, 11)),
+        shape((p) => addRoundRect(p, 48, 5, 15, 17, 5)),
+        shape((p) => addRoundRect(p, 58, 1, 30, 20, 8)),
+        shape((p) => addRoundRect(p, 67, 16, 19, 7, 3)),
+        shape((p) => addPoly(p, [[54, 22], [62, 25], [61, 29], [54, 27]])),
+        shape((p) => addRoundRect(p, 38, 24, 9, 9 - l1, 3)),
+        shape((p) => addRoundRect(p, 38, 28 - l1, 12, 6, 3)),
+      ],
+    };
+  }
+  dinoShapeCache.set(key, s);
+  return s;
+}
+
+function drawEye(c, cx, cy, r, state, outline = DINO_COLORS.outline) {
+  c.lineCap = 'round';
+  c.strokeStyle = outline;
+  if (state === 'x') {
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(cx - r * 0.7, cy - r * 0.7);
+    c.lineTo(cx + r * 0.7, cy + r * 0.7);
+    c.moveTo(cx + r * 0.7, cy - r * 0.7);
+    c.lineTo(cx - r * 0.7, cy + r * 0.7);
+    c.stroke();
+    return;
+  }
+  if (state === 'closed') {
+    c.lineWidth = 1.8;
+    c.beginPath();
+    c.arc(cx, cy - 1, r * 0.8, 0.15 * Math.PI, 0.85 * Math.PI);
+    c.stroke();
+    return;
+  }
+  c.beginPath();
+  c.arc(cx, cy, r, 0, Math.PI * 2);
+  c.fillStyle = '#ffffff';
+  c.fill();
+  c.lineWidth = 1.4;
+  c.stroke();
+  c.beginPath();
+  c.arc(cx + r * 0.25, cy + r * 0.1, r * 0.5, 0, Math.PI * 2);
+  c.fillStyle = '#1b1b1f';
+  c.fill();
+  c.beginPath();
+  c.arc(cx + r * 0.08, cy - r * 0.22, r * 0.18, 0, Math.PI * 2);
+  c.fillStyle = '#ffffff';
+  c.fill();
+}
+
+function drawDinoFace(c, pose, eyeState, dead, C = DINO_COLORS) {
+  // Tham số khuôn mặt theo tư thế đứng / cúi
+  const f = pose === 'stand'
+    ? { belly: [36, 45, 9.5, 8.5], cheek: [52.5, 15.5], mouth: [48, 65, 19.5], teeth: [56, 60.5], nose: [63, 5.5], eye: [55.5, 8, 4.6] }
+    : { belly: [40, 22, 11, 5.5], cheek: [73, 14.5], mouth: [70, 87, 18.5], teeth: [77, 81.5], nose: [85, 5], eye: [77.5, 8, 4.2] };
+
+  fillEllipse(c, f.belly[0], f.belly[1], f.belly[2], f.belly[3], C.belly);
+  fillEllipse(c, f.cheek[0], f.cheek[1], 3.2, 2, C.cheek);
+
+  // Miệng (há ra khi chết)
+  c.strokeStyle = C.outline;
+  c.lineWidth = 1.6;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(f.mouth[0], f.mouth[2]);
+  c.lineTo(f.mouth[1], f.mouth[2] + (dead ? 2.5 : 0));
+  c.stroke();
+
+  // Răng
+  c.fillStyle = '#ffffff';
+  for (const tx of f.teeth) {
+    c.beginPath();
+    c.moveTo(tx, f.mouth[2]);
+    c.lineTo(tx + 2.6, f.mouth[2]);
+    c.lineTo(tx + 1.3, f.mouth[2] + 2.8);
+    c.closePath();
+    c.fill();
+  }
+
+  // Lỗ mũi
+  c.beginPath();
+  c.arc(f.nose[0], f.nose[1], 1.1, 0, Math.PI * 2);
+  c.fillStyle = C.outline;
+  c.fill();
+
+  drawEye(c, f.eye[0], f.eye[1], f.eye[2], eyeState, C.outline);
+}
+
+/** Vẽ hình khủng long (đã translate về góc trên-trái) với bảng màu C */
+function drawDinoFigure(c, pose, l0, l1, eyeState, dead, C) {
+  const s = getDinoShapes(pose, l0, l1);
+  paintShapes(c, s.spikes, C.spike, C.outline, 2.5);
+  paintShapes(c, s.back, C.bodyDark, C.outline, 3);
+  paintShapes(c, s.main, C.body, C.outline, 3);
+  drawDinoFace(c, pose, eyeState, dead, C);
+}
+
+/** Vẽ skin ẢNH do người dùng tải lên, vừa khung khủng long, nhún theo nhịp chạy */
+function drawImageSkin(c, dino) {
+  const img = skin.image;
+  const box = DINO_SIZE[dino.pose];
+  const ratio = img.width / img.height || 1;
+  let h = box.h + (dino.pose === 'duck' ? 8 : 4);
+  let w = h * ratio;
+  if (w > box.w * 1.5) {
+    w = box.w * 1.5;
+    h = w / ratio;
+  }
+  const running = game.state === 'running' && !dino.dead && !dino.jumping;
+  const bob = running && dino.legFrame ? -3 : 0;
+  c.save();
+  if (dino.dead || dino.hurt > 0) {
+    c.translate(box.w / 2, box.h / 2);
+    c.rotate(dino.dead ? -0.45 : Math.sin(game.frame * 0.9) * 0.25);
+    c.translate(-box.w / 2, -box.h / 2);
+  }
+  if (skin.flip) {
+    c.translate(box.w, 0);
+    c.scale(-1, 1);
+  }
+  c.drawImage(img, (box.w - w) / 2, box.h - h + bob, w, h);
+  c.restore();
+}
+
+/** Vẽ chiếc mũ bảo hiểm; (cx, baseY) = giữa đỉnh đầu khủng long */
+function drawHelmet(c, cx, baseY, pop) {
+  const s = 1 + (pop / 24) * 0.45;
+  c.save();
+  c.translate(cx, baseY);
+  c.scale(s, s);
+  c.lineJoin = 'round';
+  c.lineWidth = 2;
+  c.strokeStyle = '#a8650f';
+  // Chóp mũ
+  c.beginPath();
+  c.arc(0, 0, 13, Math.PI, 0);
+  c.closePath();
+  c.fillStyle = '#ffc93c';
+  c.fill();
+  c.stroke();
+  // Sọc giữa mũ
+  c.fillStyle = '#f29f05';
+  c.fillRect(-2.5, -12.5, 5, 12.5);
+  // Vành mũ
+  c.beginPath();
+  addRoundRect(c, -17, -2, 34, 5.5, 2.75);
+  c.fillStyle = '#ffb21e';
+  c.fill();
+  c.stroke();
+  // Ánh sáng
+  c.beginPath();
+  c.arc(-5, -6, 4, Math.PI * 1.1, Math.PI * 1.55);
+  c.strokeStyle = 'rgba(255,255,255,0.85)';
+  c.lineWidth = 2;
+  c.stroke();
+  c.restore();
+}
+
+/** Vòng tròn bảo vệ mờ quanh khủng long khi có mũ / đang được đẩy */
+function drawShield(c, cx, cy, r, rgb = '255, 178, 30') {
+  const pulse = 0.5 + 0.5 * Math.sin(game.frame / 9);
+  c.save();
+  c.beginPath();
+  c.arc(cx, cy, r + pulse * 3, 0, Math.PI * 2);
+  c.fillStyle = `rgba(${rgb}, 0.10)`;
+  c.fill();
+  c.lineWidth = 2.5;
+  c.strokeStyle = `rgba(${rgb}, ${0.35 + pulse * 0.35})`;
+  c.setLineDash([10, 7]);
+  c.lineDashOffset = -game.frame * 0.6;
+  c.stroke();
+  c.restore();
+}
+
+// Vị trí đứng của khủng long nhỏ (người chơi đổi bằng nút Tiến / Lùi)
+let dinoHomeX = CONFIG.DINO_X;
+const held = { left: false, right: false }; // nút tiến/lùi đang được giữ
+
+class Dino {
+  constructor() {
+    this.helmets = 0;    // số Mũ bảo hiểm đang có (0 = trạng thái bình thường)
+    this.helmetPop = 0;  // bộ đếm hiệu ứng nhận mũ
+    this.wantDuck = false;
+    this.reset();
+  }
+
+  reset() {
+    this.x = dinoHomeX;
+    this.bottom = GROUND_Y; // toạ độ y của bàn chân
+    this.vy = 0;
+    this.jumping = false;
+    this.jumpPower = 1;     // 1 = nhảy thường, 2 = siêu nhảy
+    this.jumpCut = false;
+    this.fastFall = false;
+    this.ducking = false;
+    this.dead = false;
+    this.legFrame = 0;
+    this.facing = 1;  // 1 = quay phải, -1 = quay trái (đang đi lùi)
+    this.hurt = 0;    // > 0: đang choáng vì bị húc
+    this.knockV = 0;  // vận tốc bị hất lùi
+    this.animTick = 0;
+  }
+
+  get pose() { return this.ducking && !this.jumping ? 'duck' : 'stand'; }
+  get w() { return DINO_SIZE[this.pose].w; }
+  get h() { return DINO_SIZE[this.pose].h; }
+  get y() { return this.bottom - this.h; }
+
+  startJump() {
+    if (this.jumping || this.dead) return false;
+    // Siêu nhảy: nhân cả vận tốc và trọng lực => cao gấp N lần nhưng thời gian bay không đổi
+    this.jumpPower = game.effects.superJump > 0 ? CONFIG.SUPER_JUMP_MULTIPLIER : 1;
+    this.vy = -CONFIG.JUMP_VELOCITY * this.jumpPower;
+    this.jumping = true;
+    this.ducking = false;
+    this.jumpCut = false;
+    this.fastFall = false;
+    return true;
+  }
+
+  /** Nhả phím nhảy sớm => nhảy thấp (giống game gốc) */
+  endJump() {
+    if (this.jumping) this.jumpCut = true;
+  }
+
+  setDuck(on) {
+    this.wantDuck = on;
+    if (this.dead) return;
+    if (this.jumping) this.fastFall = on; // đang bay mà bấm ↓ => rơi nhanh
+    else this.ducking = on;
+  }
+
+  update() {
+    if (this.jumping) {
+      const p = this.jumpPower;
+      this.vy += CONFIG.GRAVITY * p * (this.fastFall ? CONFIG.FAST_FALL_FACTOR : 1);
+      this.bottom += this.vy;
+
+      const risen = GROUND_Y - this.bottom;
+      if (this.jumpCut && risen >= CONFIG.MIN_JUMP_HEIGHT * p && this.vy < -CONFIG.DROP_VELOCITY * p) {
+        this.vy = -CONFIG.DROP_VELOCITY * p;
+        this.jumpCut = false;
+      }
+      if (this.bottom >= GROUND_Y) this.land();
+    }
+    if (++this.animTick >= 6) {
+      this.animTick = 0;
+      this.legFrame ^= 1;
+    }
+  }
+
+  land() {
+    this.bottom = GROUND_Y;
+    this.vy = 0;
+    this.jumping = false;
+    this.jumpCut = false;
+    this.fastFall = false;
+    this.ducking = this.wantDuck;
+    spawnParticles(this.x + 26, GROUND_Y - 2, 6, ['#d8b679', '#c9a463'], {
+      spreadX: 10, spreadY: 1, vx: [-2.5, -0.5], vy: [-1.8, -0.4], gravity: 0.12, size: [2, 4], life: 22,
+    });
+  }
+
+  getBounds() {
+    return { x: this.x, y: this.y, w: this.w, h: this.h };
+  }
+
+  getHitboxes() {
+    const ox = this.x;
+    const oy = this.y;
+    const w = this.w;
+    const flip = this.facing < 0; // quay trái => lật hộp va chạm theo chiều ngang
+    return DINO_HITBOXES[this.pose].map((b) => ({ part: b.part, x: ox + (flip ? w - b.x - b.w : b.x), y: oy + b.y, w: b.w, h: b.h }));
+  }
+
+  /** Vị trí đỉnh đầu (để đặt mũ bảo hiểm) */
+  headAnchor() {
+    const off = this.pose === 'stand' ? 51 : 73;
+    return { cx: this.x + (this.facing < 0 ? this.w - off : off), top: this.y + 2 };
+  }
+
+  draw(c) {
+    const pose = this.pose;
+    let l0 = 0;
+    let l1 = 0;
+    if (!this.dead && game.state === 'running' && (game.moving || this.jumping)) {
+      if (this.jumping) l1 = 4;
+      else if (this.legFrame) l0 = 5;
+      else l1 = 5;
+    }
+    let eyeState = 'open';
+    if (this.dead || this.hurt > 0) eyeState = 'x';
+    else if (game.frame % 220 < 7) eyeState = 'closed';
+
+    // Đang miễn nhiễm => nhấp nháy kiểu game cổ điển (ẩn xen kẽ mỗi 4 khung hình)
+    if (game.invincible > 0 && !this.dead && Math.floor(game.frame / 4) % 2 === 0) return;
+
+    c.save();
+    // Vòng bảo vệ phía sau khi có mũ (vàng) hoặc đang được đẩy (cam)
+    const hasHelmet = this.helmets > 0 || game.effects.helmet > 0;
+    const pushing = game.push.remaining > 0;
+    if (hasHelmet || pushing) {
+      drawShield(c, this.x + this.w / 2, this.y + this.h / 2, pose === 'stand' ? 48 : 50, hasHelmet ? '255, 178, 30' : '255, 110, 50');
+    }
+
+    // Hào quang khi được đẩy cấp 2–3
+    if (pushing && (game.push.tier || 1) >= 2 && !this.dead) {
+      const cx = this.x + this.w / 2;
+      const cy = this.y + this.h / 2;
+      const r = 72 + Math.sin(game.frame / 3) * 6;
+      const col = game.push.tier === 3 ? '170, 110, 255' : '255, 200, 80';
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const ag = c.createRadialGradient(cx, cy, 10, cx, cy, r);
+      ag.addColorStop(0, `rgba(${col}, 0.55)`);
+      ag.addColorStop(1, `rgba(${col}, 0)`);
+      c.fillStyle = ag;
+      c.beginPath();
+      c.arc(cx, cy, r, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
+
+    // Vệt lấp lánh khi đang siêu nhảy
+    if (this.jumping && this.jumpPower > 1 && game.frame % 2 === 0) {
+      spawnParticles(this.x + 10, this.y + this.h - 6, 1, ['#62d9ff', '#ffffff', '#b8f1ff'], {
+        spreadX: 6, spreadY: 6, vx: [-3, -1], vy: [-0.5, 0.5], gravity: 0, size: [2, 4], life: 20,
+      });
+    }
+
+    c.translate(Math.round(this.x), Math.round(this.y));
+    if (this.facing < 0) {
+      c.translate(this.w, 0);
+      c.scale(-1, 1); // quay mặt sang trái khi đi lùi
+    }
+    if (pushing && !this.dead) drawBooster(c, pose, game.push.tier || 1); // tên lửa sau lưng
+    if (skin.image) drawImageSkin(c, this);
+    else drawDinoFigure(c, pose, l0, l1, eyeState, this.dead, DINO_SKINS[skin.color] || DINO_COLORS);
+    c.restore();
+
+    if (hasHelmet) {
+      const a = this.headAnchor();
+      drawHelmet(c, a.cx, a.top, this.helmetPop);
+    }
+  }
+}
+
+/* ======================================================================
+ * 6. VẬT CẢN: XƯƠNG RỒNG & CHIM
+ * ==================================================================== */
+const OBSTACLE_TYPES = [
+  { kind: 'cactusSmall', unitW: 26, h: 52, maxUnits: 3, multipleSpeed: 6, minSpeed: 0, minGap: 180 },
+  { kind: 'cactusLarge', unitW: 38, h: 75, maxUnits: 3, multipleSpeed: 10.5, minSpeed: 0, minGap: 180 },
+  // Chim xuất hiện khi đủ nhanh. levels = khoảng cách từ mặt đất tới đáy con chim
+  { kind: 'bird', w: 66, h: 46, minSpeed: 12.5, minGap: 225, levels: { low: 12, mid: 42, high: 78 } },
+];
+
+const OBSTACLE_NAMES = { cactusSmall: 'cây xương rồng', cactusLarge: 'cây xương rồng lớn', bird: 'con chim' };
+const PART_NAMES = { head: 'ĐẦU', body: 'thân', tail: 'đuôi', legs: 'chân' };
+
+const CACTUS_COLORS = { fill: '#4cb45a', outline: '#22652c', light: 'rgba(255,255,255,0.28)', dark: 'rgba(20,70,30,0.35)' };
+const BIRD_COLORS = { body: '#8f6cf2', wing: '#7556de', outline: '#3f2d86', belly: '#ddd2ff', beak: '#ffc145' };
+
+/** Tạo hình dạng ngẫu nhiên cho 1 cây xương rồng (thân + 0–2 tay) */
+function makeCactusUnit(ox, uw, uh) {
+  const tw = Math.round(uw * 0.42);
+  const tx = ox + Math.round((uw - tw) / 2);
+  const aw = Math.max(6, Math.round(tw * 0.62));
+  const arms = [];
+  for (const side of ['left', 'right']) {
+    if (Math.random() > 0.85) continue;
+    const joinY = Math.round(uh * rand(0.34, 0.55));
+    const up = Math.round(uh * rand(0.15, 0.26));
+    const outerX = side === 'left' ? ox + 1 : ox + uw - 1 - aw;
+    const left = side === 'left' ? outerX : tx + tw - 2;
+    const right = side === 'left' ? tx + 2 : outerX + aw;
+    arms.push({ outerX, joinY, up, aw, x: left, top: joinY - up, w: right - left, h: up + aw });
+  }
+  const shapes = [shape((p) => addTopRoundRect(p, tx, 0, tw, uh, tw / 2))];
+  for (const a of arms) {
+    shapes.push(shape((p) => addRoundRect(p, a.x, a.joinY, a.w, a.aw, a.aw / 2)));
+    shapes.push(shape((p) => addRoundRect(p, a.outerX, a.top, a.aw, a.up + a.aw, a.aw / 2)));
+  }
+  return { tx, tw, arms, shapes, flower: Math.random() < 0.18 };
+}
+
+class Cactus {
+  constructor(type, speed) {
+    this.kind = type.kind;
+    this.type = type;
+    const units = speed >= type.multipleSpeed ? randInt(1, type.maxUnits) : 1;
+    this.w = units * type.unitW;
+    this.h = type.h;
+    this.x = W;
+    this.y = GROUND_Y - this.h + 2; // cắm nhẹ xuống đất
+    this.speedOffset = 0;
+    this.destroyed = false;
+    this.units = Array.from({ length: units }, (_, i) => makeCactusUnit(i * type.unitW, type.unitW, type.h));
+  }
+
+  update(speed) {
+    this.x -= speed + this.speedOffset;
+  }
+
+  getBounds() {
+    return { x: this.x, y: this.y, w: this.w, h: this.h };
+  }
+
+  /** Hộp va chạm: thân + từng cánh tay (thu nhỏ 1px cho công bằng) */
+  getHitboxes() {
+    const boxes = [];
+    for (const u of this.units) {
+      boxes.push({ x: this.x + u.tx + 1, y: this.y + 2, w: u.tw - 2, h: this.h - 2 });
+      for (const a of u.arms) boxes.push({ x: this.x + a.x + 1, y: this.y + a.top + 1, w: a.w - 2, h: a.h - 2 });
+    }
+    return boxes;
+  }
+
+  draw(c) {
+    c.save();
+    c.translate(Math.round(this.x), Math.round(this.y));
+    for (const u of this.units) {
+      paintShapes(c, u.shapes, CACTUS_COLORS.fill, CACTUS_COLORS.outline, 3);
+      // Sọc dọc trên thân
+      c.lineCap = 'round';
+      c.lineWidth = 2;
+      c.strokeStyle = CACTUS_COLORS.light;
+      c.beginPath();
+      c.moveTo(u.tx + u.tw * 0.32, u.tw * 0.6);
+      c.lineTo(u.tx + u.tw * 0.32, this.h - 6);
+      c.stroke();
+      c.strokeStyle = CACTUS_COLORS.dark;
+      c.beginPath();
+      c.moveTo(u.tx + u.tw * 0.7, u.tw * 0.7);
+      c.lineTo(u.tx + u.tw * 0.7, this.h - 6);
+      c.stroke();
+      // Hoa trên đỉnh (ngẫu nhiên)
+      if (u.flower) {
+        const fx = u.tx + u.tw / 2;
+        c.fillStyle = '#ff7eb6';
+        for (let i = 0; i < 5; i++) {
+          const ang = (i / 5) * Math.PI * 2;
+          c.beginPath();
+          c.arc(fx + Math.cos(ang) * 3.2, -1 + Math.sin(ang) * 3.2, 2.6, 0, Math.PI * 2);
+          c.fill();
+        }
+        c.beginPath();
+        c.arc(fx, -1, 2, 0, Math.PI * 2);
+        c.fillStyle = '#ffe066';
+        c.fill();
+      }
+    }
+    c.restore();
+  }
+}
+
+const birdShapeCache = {};
+function getBirdShapes(flap) {
+  if (birdShapeCache[flap]) return birdShapeCache[flap];
+  const s = {
+    main: [
+      shape((p) => addPoly(p, [[13, 13], [22, 4], [21, 14]])),                       // mào
+      shape((p) => addPoly(p, [[48, 20], [66, 13], [61, 24], [66, 33], [48, 29]])),  // đuôi
+      shape((p) => addEllipse(p, 35, 25, 17, 9)),                                     // thân
+      shape((p) => addEllipse(p, 15, 21, 9.5, 9.5)),                                  // đầu
+    ],
+    beak: [shape((p) => addPoly(p, [[7, 18], [-2, 23], [8, 27]]))],
+    wing: [shape((p) => addPoly(p, flap ? [[25, 27], [46, 27], [33, 46]] : [[25, 22], [46, 22], [33, 0]]))],
+  };
+  birdShapeCache[flap] = s;
+  return s;
+}
+
+class Bird {
+  constructor(type) {
+    this.kind = 'bird';
+    this.type = type;
+    const levels = Object.keys(type.levels);
+    this.level = levels[randInt(0, levels.length - 1)]; // low | mid | high
+    this.w = type.w;
+    this.h = type.h;
+    this.x = W;
+    this.y = GROUND_Y - type.levels[this.level] - this.h;
+    this.speedOffset = Math.random() < 0.5 ? 0.8 : -0.8;
+    this.flap = 0;
+    this.flapTick = 0;
+    this.destroyed = false;
+  }
+
+  update(speed) {
+    this.x -= speed + this.speedOffset;
+    if (++this.flapTick >= 10) {
+      this.flapTick = 0;
+      this.flap ^= 1;
+    }
+  }
+
+  getBounds() {
+    return { x: this.x, y: this.y, w: this.w, h: this.h };
+  }
+
+  getHitboxes() {
+    const wing = this.flap
+      ? { x: this.x + 28, y: this.y + 28, w: 14, h: 16 }
+      : { x: this.x + 28, y: this.y + 2, w: 14, h: 18 };
+    return [{ x: this.x + 2, y: this.y + 12, w: 62, h: 20 }, wing];
+  }
+
+  draw(c) {
+    const s = getBirdShapes(this.flap);
+    const C = BIRD_COLORS;
+    c.save();
+    c.translate(Math.round(this.x), Math.round(this.y));
+    paintShapes(c, s.main, C.body, C.outline, 3);
+    paintShapes(c, s.beak, C.beak, C.outline, 2);
+    fillEllipse(c, 37, 28, 10, 4, C.belly);
+    paintShapes(c, s.wing, C.wing, C.outline, 2.5);
+    // Mắt + lông mày "cau có"
+    c.beginPath();
+    c.arc(13.5, 19.5, 3, 0, Math.PI * 2);
+    c.fillStyle = '#fff';
+    c.fill();
+    c.beginPath();
+    c.arc(12.7, 20, 1.5, 0, Math.PI * 2);
+    c.fillStyle = '#1b1b1f';
+    c.fill();
+    c.strokeStyle = C.outline;
+    c.lineWidth = 2;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(9.5, 15);
+    c.lineTo(17, 17);
+    c.stroke();
+    c.restore();
+  }
+}
+
+/* ======================================================================
+ * 7. VA CHẠM – LOGIC MŨ BẢO HIỂM
+ * ==================================================================== */
+
+/**
+ * Kiểm tra va chạm giữa khủng long và 1 vật cản.
+ * Trả về { part } (bộ phận bị va: 'head' | 'body' | 'tail' | 'legs') hoặc null nếu không va.
+ *
+ *  Bước 1 – So "khung bao ngoài" (nhanh): không chạm => chắc chắn không va chạm, thoát sớm.
+ *  Bước 2 – So từng hộp va chạm chi tiết (đầu, thân, đuôi, chân) với từng phần vật cản.
+ *           Nhờ vậy khoảng trống giữa tay xương rồng hay dưới cằm khủng long không bị tính là va.
+ */
+function detectCollision(dino, obstacle) {
+  if (!rectsOverlap(dino.getBounds(), obstacle.getBounds())) return null;
+  const obstacleBoxes = obstacle.getHitboxes();
+  for (const dBox of dino.getHitboxes()) {
+    for (const oBox of obstacleBoxes) {
+      if (rectsOverlap(dBox, oBox)) return { part: dBox.part };
+    }
+  }
+  return null;
+}
+
+/**
+ * Xử lý va chạm mỗi khung hình. THỨ TỰ ƯU TIÊN:
+ *
+ *  (1) Vật cản đã bị phá huỷ => bỏ qua.
+ *  (2a) Đang được ĐẨY hoặc có Mũ bảo hiểm tính giờ => húc vỡ vật cản, không chết.
+ *  (2) Khủng long đang miễn nhiễm (vừa mất mũ / vừa hồi sinh) => bỏ qua.
+ *  (3) CÓ MŨ BẢO HIỂM (dino.helmets > 0) và bộ phận va chạm được mũ bảo vệ:
+ *        - Khủng long KHÔNG chết.
+ *        - Vật cản bị PHÁ HUỶ (biến mất kèm hiệu ứng vỡ vụn).
+ *        - Mũ HẾT hiệu lực ngay lập tức (helmets - 1) => về trạng thái bình thường.
+ *        - Cho HELMET_GRACE_FRAMES khung hình miễn nhiễm để không "chết oan" ở khung hình kế tiếp.
+ *  (4) Không có mũ => GAME OVER.
+ *
+ *  Muốn mũ chỉ đỡ khi "va đầu"? Đặt CONFIG.HELMET_PROTECTS = 'head'.
+ *  Muốn thêm kỹ năng khác (VD: khiên bất tử)? Chèn thêm 1 nhánh kiểm tra trước bước (4).
+ */
+function handleCollisions() {
+  const dino = game.dino;
+
+  for (const obstacle of game.obstacles) {
+    if (obstacle.destroyed) continue;                       // (1)
+
+    const hit = detectCollision(dino, obstacle);
+    if (!hit) continue;
+
+    // (2a) Đang được ĐẨY (quà GIÚP) hoặc có Mũ bảo hiểm tính giờ => húc vỡ vật cản, KHÔNG chết
+    if (game.push.remaining > 0 || game.effects.helmet > 0 || game.cine) {
+      destroyObstacle(obstacle);
+      game.shake = Math.max(game.shake, 4);
+      continue;
+    }
+
+    if (game.invincible > 0) continue;                      // (2)
+
+    const helmetCovers = CONFIG.HELMET_PROTECTS === 'all' || hit.part === 'head';
+    if (dino.helmets > 0 && helmetCovers) {                 // (3)
+      dino.helmets -= 1;
+      destroyObstacle(obstacle);
+      game.invincible = CONFIG.HELMET_GRACE_FRAMES;
+      game.shake = 8;
+
+      const a = dino.headAnchor();
+      spawnParticles(a.cx, a.top - 4, 14, ['#ffc93c', '#ffb21e', '#ffffff'], {
+        spreadX: 10, spreadY: 6, vx: [-4, 3], vy: [-6, -2], gravity: 0.4, size: [3, 6], life: 40,
+      });
+
+      const msg = `⛑️ Mũ bảo hiểm đã cứu khủng long khi va ${PART_NAMES[hit.part]} vào ${OBSTACLE_NAMES[obstacle.kind]}! Mũ đã vỡ.`;
+      addLog(msg, 'helmet');
+      showToast('⛑️ Mũ bảo hiểm đã đỡ đòn! (mũ vỡ)', '#ffc93c');
+      continue;
+    }
+
+    gameOver(obstacle, hit);                                // (4)
+    return;
+  }
+}
+
+/** Phá huỷ vật cản: ẩn khỏi màn hình + bắn mảnh vụn */
+function destroyObstacle(obstacle) {
+  obstacle.destroyed = true;
+  const colors = obstacle.kind === 'bird'
+    ? [BIRD_COLORS.body, BIRD_COLORS.wing, BIRD_COLORS.belly, BIRD_COLORS.beak]
+    : [CACTUS_COLORS.fill, CACTUS_COLORS.outline, '#7fd38a'];
+  spawnParticles(obstacle.x + obstacle.w / 2, obstacle.y + obstacle.h / 2, 28, colors, {
+    spreadX: obstacle.w / 2, spreadY: obstacle.h / 2, vx: [-2, 7], vy: [-7, -1], gravity: 0.38, size: [3, 8], life: 50,
+  });
+}
+
+/* ======================================================================
+ * 8. TRẠNG THÁI & VÒNG LẶP GAME
+ * ==================================================================== */
+const game = {
+  state: 'ready',        // 'ready' | 'running' | 'over'
+  frame: 0,
+  runFrames: 0,
+  overFrames: 0,
+  speed: CONFIG.SPEED_START,
+  meters: 0,             // số mét hiện tại (đủ WIN_DISTANCE => +1 win)
+  wins: 0,
+  push: { remaining: 0, rate: 0, extra: 0 },
+  autoMove: true,        // TỰ ĐỘNG CHẠY (tắt => tự bấm ◀ ▶)
+  moving: false, // trạng thái "được đẩy" bởi quà GIÚP
+  wheelQueue: [],        // các lượt quay đang chờ
+  wheel: null,           // lượt quay đang chạy
+  floaters: [],          // chữ bay lên (+100m, -1 WIN...)
+  flash: 0,
+  flashColor: '255, 255, 255',
+  cine: null,            // cảnh điện ảnh đang chiếu (+win / -win / nuke)
+  cineQueue: [],
+  sparks: [],
+  rockets: [],
+  confetti: [],
+  winPop: 0,
+  groundX: 0,
+  dino: new Dino(),
+  obstacles: [],
+  recentKinds: [],
+  particles: [],
+  clouds: [],
+  toasts: [],
+  effects: { superJump: 0, superJumpTotal: 1, speedBoost: 0, speedBoostTotal: 1, helmet: 0, helmetTotal: 1 },
+  invincible: 0,
+  bully: null,           // con khủng long to đang lao vào húc
+  bullyQueue: 0,         // số mét bị kéo lùi đang chờ con to tới húc
+  helper: null,          // con khủng long xanh đang lao tới đẩy
+  helperQueue: 0,
+  trail: [],             // bóng mờ khi được đẩy
+  rings: [],             // sóng âm
+  shake: 0,
+  bot: false,
+  likeBank: 0,
+};
+
+/* ---------- Lưu tiến độ (mét, win) để tải lại trang không bị mất ---------- */
+function loadProgress() {
+  try {
+    const p = JSON.parse(localStorage.getItem('trexlive.progress') || '{}');
+    game.meters = Math.max(0, Number(p.meters) || 0);
+    game.wins = Number(p.wins) || 0;
+  } catch { /* bỏ qua */ }
+}
+function saveProgress() {
+  try {
+    localStorage.setItem('trexlive.progress', JSON.stringify({ meters: Math.floor(game.meters), wins: game.wins }));
+  } catch { /* bỏ qua */ }
+}
+
+/** Tốc độ "thật" của khủng long (dùng để tính mét và khoảng cách vật cản) */
+const currentSpeed = () => game.speed + (game.effects.speedBoost > 0 ? CONFIG.SPEED_BOOST_AMOUNT : 0);
+/** Tốc độ cuộn màn hình = tốc độ thật + phần tăng thêm khi đang được đẩy */
+const worldSpeed = () => currentSpeed() + game.push.extra;
+
+const shortName = (name) => (name.length > 18 ? `${name.slice(0, 17)}…` : name);
+const groupColor = (rule) => rule.color || GIFT_GROUPS[rule.group]?.color || '#25f4ee';
+
+/** Cộng thời gian cho hiệu ứng (helmet / superJump / speedBoost), tối đa 60s. Trả về số giây còn lại. */
+function addTimedEffect(name, seconds) {
+  const fx = game.effects;
+  fx[name] = Math.min(60 * CONFIG.FPS, fx[name] + Math.round(seconds * CONFIG.FPS));
+  fx[`${name}Total`] = fx[name];
+  if (name === 'helmet') game.dino.helmetPop = 24;
+  return Math.ceil(fx[name] / CONFIG.FPS);
+}
+
+/* ---------- MÉT & WIN ---------- */
+
+/** Cộng/trừ mét. Đủ WIN_DISTANCE => +1 win (mét dư giữ lại). */
+function addMeters(delta) {
+  game.meters += delta;
+  while (game.meters >= CONFIG.WIN_DISTANCE) {
+    game.meters -= CONFIG.WIN_DISTANCE;
+    changeWins(1, { reason: `Chạy đủ ${CONFIG.WIN_DISTANCE}m` });
+  }
+  if (game.meters < 0) {
+    if (CONFIG.NEGATIVE_METERS_BORROW_WIN) {
+      while (game.meters < 0) {
+        game.meters += CONFIG.WIN_DISTANCE;
+        changeWins(-1, { reason: 'Bị kéo lùi quá 0m' });
+      }
+    } else {
+      game.meters = 0;
+    }
+  }
+}
+
+/** Cộng/trừ win. Mặc định kèm cảnh ăn mừng (+) hoặc thảm hoạ (-); silent = chỉ hiện chữ nhỏ */
+function changeWins(delta, { reason = '', label = '', silent = false } = {}) {
+  if (!delta) return;
+  game.wins += delta;
+  if (!CONFIG.ALLOW_NEGATIVE_WINS && game.wins < 0) game.wins = 0;
+  const up = delta > 0;
+  game.winPop = 30;
+  spawnFloater(`${up ? '+' : ''}${delta} WIN ${up ? '🏆' : '💀'}`, up ? '#f2a900' : '#ff3b4f', W - 130, 96, 30);
+  if (silent) {
+    if (!up) {
+      game.flashColor = '255, 60, 80';
+      game.flash = Math.max(game.flash, 16);
+    }
+  } else {
+    queueCinematic(up ? 'win' : 'lose', { amount: delta, label: label || reason });
+  }
+  if (!silent && reason) {
+    addLog(`🏆 ${reason} → ${up ? '+' : ''}${delta} WIN (tổng ${game.wins} win)`, up ? 'success' : 'error');
+    showToast(`🏆 ${reason}: ${up ? '+' : ''}${delta} WIN!`, up ? '#ffc93c' : '#ff5d6c');
+  }
+  saveProgress();
+}
+
+const pushTier = (m) => (m >= 1000 ? 3 : m >= 100 ? 2 : 1); // 1: nhỏ, 2: tăng tốc, 3: SIÊU TỐC
+
+/**
+ * Quà GIÚP: một con KHỦNG LONG XANH TO lao từ bên trái vào ĐẨY con nhỏ, con nhỏ được gắn
+ * tên lửa và lao đi m mét. Trong lúc đẩy: húc vỡ mọi vật cản, KHÔNG thể chết
+ * (nhánh (2a) trong handleCollisions). Nhiều quà khi con xanh đang lao tới => gộp vào cú đẩy đó.
+ */
+function pushForward(m) {
+  if (game.state === 'ready') startGame();
+  if (game.state !== 'running') {
+    startPush(m); // đang Game Over: cộng sẵn, chạy khi vào lượt mới
+    return `Đẩy lên ${m}m!`;
+  }
+  if (game.helper && !game.helper.hit) game.helper.amount += m;
+  else game.helperQueue += m;
+  return `Khủng long xanh lao tới đẩy +${m}m!`;
+}
+
+/** Bắt đầu (hoặc cộng thêm) quãng được đẩy. Hiệu ứng mạnh dần theo cấp (pushTier). */
+function startPush(m) {
+  const p = game.push;
+  const wasIdle = p.remaining <= 0;
+  p.remaining += m;
+  // Đẩy càng xa càng lâu: 10m ~1.4s, 100m ~2.3s, 1000m ~5s (tối đa 6s)
+  const frames = Math.min(6, 1 + Math.sqrt(p.remaining) / 8) * CONFIG.FPS;
+  p.rate = p.remaining / frames;
+  const tier = pushTier(m);
+  p.tier = wasIdle ? tier : Math.max(p.tier || 1, tier);
+  p.total = (wasIdle ? 0 : p.total || 0) + m;
+  spawnFloater(`+${m}m`, '#1fa85c', game.dino.x + 70, game.dino.y - 10, 22 + tier * 6);
+  if (tier >= 2) {
+    // Sóng âm khi phá tốc độ
+    game.rings.push({ x: game.dino.x + 30, y: game.dino.y + 35, r: 12, life: 28, max: 28 });
+    game.shake = Math.max(game.shake, tier * 5);
+  }
+  if (tier >= 3) {
+    game.flashColor = '255, 255, 255';
+    game.flash = Math.max(game.flash, 18);
+  }
+}
+
+/* ---------- CON KHỦNG LONG XANH ĐI ĐẨY ---------- */
+const HELPER_COLORS = { body: '#3d8bff', bodyDark: '#2a6fe0', outline: '#0d2a5c', belly: '#dff0ff', spike: '#ffd400', cheek: 'rgba(255,140,170,0.6)' };
+const HELPER = { scale: 1.9, approach: 30 };
+
+function updateHelper() {
+  if (!game.helper && game.helperQueue > 0) {
+    game.helper = { t: 0, amount: game.helperQueue, x: -200, hit: false };
+    game.helperQueue = 0;
+  }
+  const h = game.helper;
+  if (!h) return;
+  h.t++;
+  const w = DINO_SIZE.stand.w * HELPER.scale;
+  const targetX = game.dino.x + 10 - w; // mõm con xanh chạm đuôi con nhỏ
+  if (!h.hit) {
+    const k = Math.min(1, h.t / HELPER.approach);
+    h.x = -200 + (targetX + 200) * k * k;
+    if (k >= 1) {
+      // ===== CÚ ĐẨY =====
+      h.hit = true;
+      startPush(h.amount);
+      spawnFloater('ĐẨY!!', '#2a6fe0', game.dino.x + 20, game.dino.y - 34, 34);
+      spawnParticles(game.dino.x + 6, game.dino.y + 35, 22, ['#ffffff', '#9cc8ff', '#ffd400'], {
+        spreadX: 6, spreadY: 18, vx: [-2, 6], vy: [-5, 1], gravity: 0.2, size: [3, 7], life: 30,
+      });
+      game.shake = Math.max(game.shake, 8);
+    }
+  } else {
+    h.x -= 4 + (h.t - HELPER.approach) * 0.5; // tụt lại phía sau vì con nhỏ lao vút đi
+    if (h.x < -w - 40) game.helper = null;
+  }
+}
+
+function drawHelper() {
+  const h = game.helper;
+  if (!h) return;
+  const s = HELPER.scale;
+  const hh = DINO_SIZE.stand.h * s;
+  const legs = Math.floor(game.frame / 4) % 2 ? [5, 0] : [0, 5];
+  ctx.save();
+  ctx.translate(Math.round(h.x), Math.round(GROUND_Y - hh + (legs[0] ? -3 : 0)));
+  ctx.scale(s, s);
+  drawDinoFigure(ctx, 'stand', legs[0], legs[1], h.hit ? 'closed' : 'open', false, HELPER_COLORS);
+  ctx.restore();
+}
+
+/** Tên lửa gắn sau lưng khủng long nhỏ khi đang được đẩy (vẽ trong toạ độ của khủng long) */
+function drawBooster(c, pose, tier) {
+  const bx = pose === 'stand' ? 2 : 6;
+  const by = pose === 'stand' ? 24 : 4;
+  const fy = by + 12;
+  const L = (tier === 1 ? 24 : tier === 2 ? 44 : 70) * rand(0.8, 1.15);
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  const g = c.createLinearGradient(bx - 4, 0, bx - 4 - L, 0);
+  g.addColorStop(0, 'rgba(255,255,255,0.95)');
+  g.addColorStop(0.25, 'rgba(255,230,120,0.9)');
+  g.addColorStop(0.6, tier === 3 ? 'rgba(170,90,255,0.85)' : 'rgba(255,120,30,0.85)');
+  g.addColorStop(1, 'rgba(255,40,0,0)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.moveTo(bx - 2, fy - 7);
+  c.quadraticCurveTo(bx - 4 - L * 0.6, fy - 10, bx - 4 - L, fy);
+  c.quadraticCurveTo(bx - 4 - L * 0.6, fy + 10, bx - 2, fy + 7);
+  c.closePath();
+  c.fill();
+  c.restore();
+  c.lineJoin = 'round';
+  c.lineWidth = 2.5;
+  c.strokeStyle = '#1b1b1f';
+  c.fillStyle = '#e9edf3';
+  c.beginPath();
+  addRoundRect(c, bx - 6, by, 22, 24, 6);
+  c.fill();
+  c.stroke();
+  c.fillStyle = '#e5484d';
+  c.fillRect(bx - 5, by + 9, 20, 5);
+  c.beginPath();
+  c.moveTo(bx + 16, by + 3);
+  c.lineTo(bx + 25, by + 12);
+  c.lineTo(bx + 16, by + 21);
+  c.closePath();
+  c.fill();
+  c.stroke();
+}
+
+/** Bóng mờ cầu vồng phía sau khi đẩy cấp 2–3 */
+function drawTrail() {
+  const n = game.trail.length;
+  game.trail.forEach((g, i) => {
+    const hue = (game.frame * 10 + i * 45) % 360;
+    const col = `hsl(${hue}, 100%, 62%)`;
+    ctx.save();
+    ctx.globalAlpha = 0.5 * (1 - i / n);
+    ctx.translate(Math.round(g.x - (i + 1) * 10), Math.round(g.y));
+    drawDinoFigure(ctx, g.pose, 0, 0, 'open', false, { body: col, bodyDark: col, outline: `hsl(${hue}, 100%, 38%)`, belly: col, spike: col, cheek: 'rgba(0,0,0,0)' });
+    ctx.restore();
+  });
+}
+
+/** Đường hầm sao "xuyên không gian" khi SIÊU TỐC (+1000m) */
+function drawWarp() {
+  const a = game.push.warp || 0;
+  if (a <= 0) return;
+  if (!game.stars) game.stars = Array.from({ length: 90 }, () => ({ ang: rand(0, Math.PI * 2), d: rand(5, 600), hue: randInt(180, 320) }));
+  const vx = W * 0.78;
+  const vy = H * 0.42;
+  ctx.save();
+  const g = ctx.createRadialGradient(vx, vy, 0, vx, vy, W * 0.8);
+  g.addColorStop(0, `rgba(255, 255, 255, ${0.55 * a})`);
+  g.addColorStop(0.15, `rgba(120, 60, 255, ${0.6 * a})`);
+  g.addColorStop(1, `rgba(10, 0, 40, ${0.85 * a})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  for (const st of game.stars) {
+    st.d += 4 + st.d * 0.07;
+    if (st.d > 900) {
+      st.d = rand(5, 40);
+      st.ang = rand(0, Math.PI * 2);
+    }
+    const len = st.d * 0.25;
+    const cs = Math.cos(st.ang);
+    const sn = Math.sin(st.ang);
+    ctx.strokeStyle = `hsla(${st.hue}, 100%, 75%, ${a})`;
+    ctx.lineWidth = 1 + st.d / 250;
+    ctx.beginPath();
+    ctx.moveTo(vx + cs * (st.d - len), vy + sn * (st.d - len));
+    ctx.lineTo(vx + cs * st.d, vy + sn * st.d);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function updateRings() {
+  for (const r of game.rings) {
+    r.r += 14;
+    r.life--;
+  }
+  game.rings = game.rings.filter((r) => r.life > 0);
+}
+function drawRings() {
+  ctx.save();
+  for (const r of game.rings) {
+    const a = r.life / r.max;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${a})`;
+    ctx.lineWidth = 2 + 6 * a;
+    ctx.beginPath();
+    ctx.ellipse(r.x, r.y, r.r, r.r * 0.8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Chữ lớn trong lúc được đẩy cấp 2–3 */
+/** Nhắc cách đi khi đang tắt tự động chạy mà khủng long đứng yên */
+function drawManualHint() {
+  if (game.autoMove || game.bot || game.state !== 'running' || game.moving || game.cine) return;
+  drawOutlinedText('Giữ ▶ TIẾN để chạy · ◀ LÙI để đi lùi', W / 2, 190, 24, '#ffffff');
+}
+
+function drawPushBanner() {
+  const p = game.push;
+  if (p.remaining <= 0 || (p.tier || 1) < 2) return;
+  const left = Math.ceil(p.remaining);
+  if (p.tier === 3) {
+    drawGoldText('SIÊU TỐC!!', W / 2, 205, 58, 1 + 0.05 * Math.sin(game.frame / 3));
+    drawOutlinedText(`+${p.total}m  ·  còn ${left}m`, W / 2, 258, 26, '#ffffff');
+  } else {
+    drawOutlinedText(`🚀 TĂNG TỐC +${p.total}m · còn ${left}m`, W / 2, 190, 30, '#ffd166');
+  }
+}
+
+/**
+ * Quà PHÁ: kéo lùi m mét.
+ * Khi đang chơi: một con KHỦNG LONG TO lao từ bên phải vào HÚC con nhỏ bật lùi lại,
+ * số mét bị trừ đúng lúc va. Nhiều quà trong lúc con to đang lao tới => cộng dồn vào cú húc đó.
+ */
+function pullBack(m) {
+  if (game.state !== 'running') {
+    applyPullBack(m);
+    return `Kéo lùi ${m}m!`;
+  }
+  if (game.bully && !game.bully.hit) game.bully.amount += m;
+  else game.bullyQueue += m;
+  return `Khủng long to lao tới húc lùi ${m}m!`;
+}
+
+/** Trừ mét thật sự + rung màn hình, nháy đỏ, chữ -Xm */
+function applyPullBack(m) {
+  addMeters(-m);
+  game.shake = Math.max(game.shake, 8 + Math.min(14, m / 80));
+  game.flashColor = '255, 60, 80';
+  game.flash = Math.max(game.flash, 14);
+  spawnFloater(`-${m}m`, '#ff3b4f', game.dino.x + 60, game.dino.y - 14, 30);
+}
+
+/* ---------- CON KHỦNG LONG TO ĐI HÚC ---------- */
+const BULLY = { scale: 2.1, approach: 34, hold: 26 }; // số khung hình: lao tới / đứng gầm
+
+function updateBully() {
+  const d = game.dino;
+  // Con nhỏ bị hất lùi rồi chạy dần về chỗ cũ
+  if (d.knockV) {
+    d.x = Math.max(4, d.x + d.knockV);
+    d.knockV *= 0.86;
+    if (Math.abs(d.knockV) < 0.4) d.knockV = 0;
+  } else if (Math.abs(d.x - dinoHomeX) > 0.5) {
+    d.x += (dinoHomeX - d.x) * (d.hurt > 0 ? 0.04 : 0.35); // bị húc thì về chậm, đi bằng nút thì nhanh
+  } else {
+    d.x = dinoHomeX;
+  }
+  if (d.hurt > 0) d.hurt--;
+
+  if (!game.bully && game.bullyQueue > 0) {
+    game.bully = { t: 0, amount: game.bullyQueue, x: W + 40, hit: false };
+    game.bullyQueue = 0;
+  }
+  const b = game.bully;
+  if (!b) return;
+  b.t++;
+  const bw = DINO_SIZE.stand.w * BULLY.scale;
+  const targetX = d.x + DINO_SIZE.stand.w - 10; // mõm con to chạm mặt con nhỏ
+
+  if (b.t <= BULLY.approach) {
+    const k = b.t / BULLY.approach;
+    b.x = W + 40 + (targetX - (W + 40)) * k * k; // tăng tốc dần khi lao tới
+    // Con to giẫm nát vật cản trên đường
+    for (const o of game.obstacles) {
+      if (!o.destroyed && o.x < b.x + bw && o.x + o.w > b.x) destroyObstacle(o);
+    }
+  } else if (!b.hit) {
+    // ===== CÚ HÚC =====
+    b.hit = true;
+    applyPullBack(b.amount);
+    d.knockV = -(10 + Math.min(10, b.amount / 100));
+    d.hurt = 45;
+    if (!d.jumping) {
+      d.ducking = false;
+      d.jumping = true;
+      d.jumpPower = 1;
+      d.vy = -7; // bị hất tung nhẹ
+    }
+    game.invincible = Math.max(game.invincible, 90); // không chết oan khi đang choáng
+    spawnFloater('HÚC!!', '#ff3b4f', b.x + 50, GROUND_Y - DINO_SIZE.stand.h * BULLY.scale - 10, 34);
+    spawnParticles(targetX, GROUND_Y - 45, 26, ['#ffffff', '#ffd166', '#ff7a59'], {
+      spreadX: 8, spreadY: 20, vx: [-7, 3], vy: [-6, -1], gravity: 0.3, size: [3, 7], life: 35,
+    });
+  } else if (b.t > BULLY.approach + BULLY.hold) {
+    b.x += 6 + (b.t - BULLY.approach - BULLY.hold) * 0.7; // quay về bên phải
+    if (b.x > W + 60) game.bully = null;
+  }
+}
+
+function drawBully() {
+  const b = game.bully;
+  if (!b) return;
+  const s = BULLY.scale;
+  const w = DINO_SIZE.stand.w * s;
+  const h = DINO_SIZE.stand.h * s;
+  const standing = b.hit && b.t <= BULLY.approach + BULLY.hold;
+  const legs = Math.floor(game.frame / 4) % 2 ? [5, 0] : [0, 5];
+  ctx.save();
+  // Lật ngang: con to quay mặt sang TRÁI nhìn con nhỏ
+  ctx.translate(Math.round(b.x + w), Math.round(GROUND_Y - h + (standing ? 0 : (legs[0] ? -3 : 0))));
+  ctx.scale(-s, s);
+  drawDinoFigure(ctx, 'stand', standing ? 0 : legs[0], standing ? 0 : legs[1], 'open', false, BULLY_COLORS);
+  // Lông mày giận dữ
+  ctx.strokeStyle = BULLY_COLORS.outline;
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(50, 2.5);
+  ctx.lineTo(60, 6);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Mỗi khung hình: tiêu dần quãng "được đẩy", cộng mét và tăng tốc độ cuộn màn hình */
+function updatePush() {
+  const p = game.push;
+  if (p.remaining <= 0) {
+    p.extra = 0;
+    p.warp = Math.max(0, (p.warp || 0) - 0.05);
+    return;
+  }
+  const step = Math.min(p.rate, p.remaining);
+  p.remaining -= step;
+  addMeters(step);
+  const tier = p.tier || 1;
+  p.extra = Math.min(CONFIG.PUSH_MAX_EXTRA_SPEED + (tier === 3 ? 15 : 0), 6 + step / CONFIG.METERS_PER_PX);
+  if (tier >= 3) p.warp = Math.min(1, (p.warp || 0) + 0.05);
+  const d = game.dino;
+  // Bóng mờ cầu vồng
+  if (tier >= 2 && game.frame % 2 === 0) {
+    game.trail.unshift({ x: d.x, y: d.y, pose: d.pose });
+    if (game.trail.length > 7) game.trail.pop();
+  }
+  // Tia lửa phụt ra sau lưng
+  const n = tier === 1 ? 2 : tier === 2 ? 4 : 7;
+  for (let i = 0; i < n; i++) {
+    const color = tier === 3 ? `hsl(${(game.frame * 12 + i * 40) % 360}, 100%, 62%)` : `hsl(${randInt(20, 50)}, 100%, 60%)`;
+    spawnSpark(d.x - 4, d.y + (d.pose === 'stand' ? 36 : 16) + rand(-5, 5), rand(-9, -4), rand(-1.2, 1.2), color, randInt(14, 26), rand(2, 4));
+  }
+  if (p.remaining <= 0.001) {
+    p.remaining = 0;
+    p.extra = 0;
+    game.trail = [];
+    game.invincible = Math.max(game.invincible, 20); // 1/3 giây an toàn sau khi đẩy xong
+    if (tier >= 3) {
+      game.flashColor = '255, 255, 255';
+      game.flash = Math.max(game.flash, 20);
+      spawnFloater('VÈO!!', '#7c3aed', d.x + 90, d.y - 20, 40);
+    }
+  }
+}
+
+/** Sư tử: phóng tên lửa hạt nhân (cảnh NUKE) – mét & win về 0 đúng lúc nổ (doNukeImpact) */
+function nukeEverything(sender = '') {
+  queueCinematic('nuke', { amount: 0, label: sender ? `@${shortName(String(sender))} đã phóng NUKE!` : '' });
+}
+
+/* ---------- VÒNG QUAY MAY MẮN ---------- */
+function wheelSegmentLabel(seg) {
+  if (seg.type === 'meters') return `${seg.value > 0 ? '+' : ''}${seg.value}m`;
+  const names = { helmet: 'Mũ', superJump: 'Nhảy', speedBoost: 'Tốc' };
+  return `${names[seg.type] || seg.type} ${seg.value}s`;
+}
+function wheelSegmentColor(seg, i) {
+  if (seg.type === 'meters') return seg.value > 0 ? (i % 4 === 0 ? '#22a861' : '#2fbf71') : (i % 4 === 1 ? '#d63a46' : '#e5484d');
+  return { helmet: '#f59e0b', superJump: '#3b82f6', speedBoost: '#8b5cf6' }[seg.type] || '#64748b';
+}
+
+function queueWheel(rule, sender) {
+  if (game.wheelQueue.length < 50) game.wheelQueue.push({ rule, sender: String(sender || 'Ẩn danh') });
+}
+
+/** Chọn kết quả NGẪU NHIÊN trước, rồi quay bánh xe sao cho kim dừng đúng ô đó */
+function updateWheel() {
+  if (!game.wheel) {
+    const next = game.wheelQueue.shift();
+    if (!next) return;
+    const segs = next.rule.wheel;
+    const index = randInt(0, segs.length - 1);
+    const slice = (Math.PI * 2) / segs.length;
+    game.wheel = {
+      ...next,
+      segs,
+      index,
+      t: 0,
+      angle: 0,
+      applied: false,
+      spinFrames: Math.round(CONFIG.WHEEL_SPIN_SECONDS * CONFIG.FPS),
+      holdFrames: Math.round(CONFIG.WHEEL_RESULT_SECONDS * CONFIG.FPS),
+      // Kim ở đỉnh (góc -90°): quay 6 vòng rồi dừng ở giữa ô `index`
+      target: Math.PI * 12 - Math.PI / 2 - (index + 0.5) * slice,
+    };
+    return;
+  }
+  const w = game.wheel;
+  w.t++;
+  const k = Math.min(1, w.t / w.spinFrames);
+  w.angle = w.target * (1 - Math.pow(1 - k, 3)); // chậm dần đều cho hồi hộp
+  if (k >= 1 && !w.applied) {
+    w.applied = true;
+    applyWheelResult(w);
+  }
+  if (w.t >= w.spinFrames + w.holdFrames) game.wheel = null;
+}
+
+function applyWheelResult(w) {
+  const seg = w.segs[w.index];
+  let text;
+  if (seg.type === 'meters') {
+    text = seg.value >= 0 ? pushForward(seg.value) : pullBack(-seg.value);
+  } else {
+    const actionName = seg.type === 'helmet' ? 'helmetTimed' : seg.type;
+    text = GIFT_ACTIONS[actionName](game, { count: 1 }, { value: seg.value });
+  }
+  const bad = seg.type === 'meters' && seg.value < 0;
+  addLog(`🎡 Vòng quay của ${w.sender}: ${wheelSegmentLabel(seg)} → ${text}`, bad ? 'troll' : 'help');
+  showToast(`🎡 @${shortName(w.sender)} quay trúng ${wheelSegmentLabel(seg)}!`, bad ? '#ff5d6c' : '#3ddc84');
+}
+
+/* ---------- Chữ bay (+100m, -1 WIN...) ---------- */
+function spawnFloater(text, color, x, y, size = 26) {
+  game.floaters.push({ text, color, x: Math.max(60, Math.min(W - 60, x)), y, size, life: 75, max: 75 });
+  if (game.floaters.length > 12) game.floaters.shift();
+}
+function updateFloaters() {
+  for (const f of game.floaters) {
+    f.y -= 0.9;
+    f.life--;
+  }
+  game.floaters = game.floaters.filter((f) => f.life > 0);
+}
+
+/** Bắt đầu lượt mới. Mũ bảo hiểm & siêu nhảy người xem đã tặng được GIỮ LẠI. */
+function startGame() {
+  game.state = 'running';
+  game.runFrames = 0;
+  game.overFrames = 0;
+  game.speed = CONFIG.SPEED_START;
+  game.obstacles = [];
+  game.recentKinds = [];
+  game.effects.speedBoost = 0;
+  game.invincible = 0;
+  game.dino.reset();
+  game.dino.ducking = game.dino.wantDuck;
+}
+
+function gameOver(obstacle, hit) {
+  game.helper = null;
+  game.helperQueue = 0;
+  game.trail = [];
+  game.bully = null;
+  game.bullyQueue = 0;
+  game.dino.knockV = 0;
+  game.state = 'over';
+  game.overFrames = 0;
+  game.dino.dead = true;
+  game.shake = 10;
+  // Luật khi chết: mất hết mét + trừ win (chỉnh trong CONFIG)
+  const lost = Math.floor(game.meters);
+  game.push.remaining = 0;
+  game.push.extra = 0;
+  if (CONFIG.DEATH_RESETS_METERS) game.meters = 0;
+  if (CONFIG.DEATH_WIN_PENALTY) changeWins(-CONFIG.DEATH_WIN_PENALTY, { silent: true });
+  saveProgress();
+  const penalty = CONFIG.DEATH_WIN_PENALTY ? ` và -${CONFIG.DEATH_WIN_PENALTY} win` : '';
+  addLog(`💥 Khủng long va ${PART_NAMES[hit.part]} vào ${OBSTACLE_NAMES[obstacle.kind]} – GAME OVER: mất ${lost}m${penalty} (còn ${game.wins} win)`, 'error');
+}
+
+function reviveDino() {
+  const dino = game.dino;
+  game.state = 'running';
+  game.overFrames = 0;
+  dino.dead = false;
+  dino.bottom = GROUND_Y;
+  dino.vy = 0;
+  dino.jumping = false;
+  dino.fastFall = false;
+  dino.ducking = false;
+  // Dọn vật cản ngay trước mặt để không chết lại ngay
+  for (const o of game.obstacles) {
+    if (!o.destroyed && o.x < dino.x + 360) destroyObstacle(o);
+  }
+  game.invincible = Math.round(CONFIG.REVIVE_INVINCIBLE_SECONDS * CONFIG.FPS);
+  spawnParticles(dino.x + 33, dino.y + 30, 18, ['#ff5fa2', '#ff9ccb', '#ffffff'], {
+    spreadX: 30, spreadY: 30, vx: [-2, 2], vy: [-4, -1], gravity: -0.02, size: [3, 6], life: 50,
+  });
+}
+
+function isDuplicateKind(kind) {
+  const recent = game.recentKinds;
+  return recent.length >= CONFIG.MAX_OBSTACLE_DUPLICATION && recent.every((k) => k === kind);
+}
+
+function spawnObstacle() {
+  const speed = currentSpeed();
+  const available = OBSTACLE_TYPES.filter((t) => speed >= t.minSpeed);
+  let type = available[0];
+  for (let tries = 0; tries < 10; tries++) {
+    type = available[randInt(0, available.length - 1)];
+    if (!isDuplicateKind(type.kind)) break;
+  }
+  const obstacle = type.kind === 'bird' ? new Bird(type) : new Cactus(type, speed);
+
+  // Khoảng cách tới vật cản kế tiếp: rộng hơn khi vật cản to / tốc độ cao (công thức kiểu game gốc)
+  const minGap = Math.round((obstacle.w * speed) / 1.5 + type.minGap * CONFIG.GAP_COEFFICIENT);
+  obstacle.gap = randInt(minGap, Math.round(minGap * 1.5));
+
+  game.obstacles.push(obstacle);
+  game.recentKinds.push(type.kind);
+  if (game.recentKinds.length > CONFIG.MAX_OBSTACLE_DUPLICATION) game.recentKinds.shift();
+}
+
+function maybeSpawnObstacle() {
+  if (game.runFrames < CONFIG.FIRST_OBSTACLE_DELAY) return;
+  const last = game.obstacles[game.obstacles.length - 1];
+  if (!last || last.x + last.w + last.gap < W) spawnObstacle();
+}
+
+/** Một bước logic (gọi đúng 60 lần/giây) */
+function update() {
+  game.frame++;
+  updateClouds();
+  updateParticles();
+  updateToasts();
+  if (game.shake > 0) game.shake = game.shake < 0.3 ? 0 : game.shake * 0.85;
+  if (game.dino.helmetPop > 0) game.dino.helmetPop--;
+  updateWheel();
+  updateFloaters();
+  if (game.flash > 0) game.flash--;
+  if (game.frame % 60 === 0) saveProgress();
+  updateCinematic();
+  updateSparks();
+  updateRings();
+  updateRockets();
+  updateConfetti();
+  if (game.winPop > 0) game.winPop--;
+  if (game.cine && game.cine.freeze) return; // NUKE: đóng băng thế giới game
+
+  if (game.state === 'over') {
+    game.overFrames++;
+    if (CONFIG.AUTO_RESTART_SECONDS > 0 && game.overFrames >= CONFIG.AUTO_RESTART_SECONDS * CONFIG.FPS) {
+      startGame();
+    }
+    return;
+  }
+  if (game.state !== 'running') return;
+
+  game.runFrames++;
+  if (game.effects.superJump > 0) game.effects.superJump--;
+  if (game.effects.speedBoost > 0) game.effects.speedBoost--;
+  if (game.effects.helmet > 0) game.effects.helmet--;
+  if (game.invincible > 0) game.invincible--;
+
+  // Hướng chạy: TỰ ĐỘNG CHẠY (hoặc bot) => luôn tiến; tắt => giữ ▶ để tiến, ◀ để lùi, thả ra thì đứng
+  const runDir = game.autoMove || game.bot ? 1 : (held.right ? 1 : 0) - (held.left ? 1 : 0);
+  game.speed = Math.min(CONFIG.SPEED_MAX, game.speed + CONFIG.ACCELERATION * Math.max(0, runDir));
+  updatePush();
+  updateBully();
+  updateHelper();
+  // Tốc độ cuộn màn hình (âm = đi lùi). Khi được đẩy thì luôn lao về phía trước.
+  const speed = currentSpeed() * runDir + game.push.extra;
+  game.moving = Math.abs(speed) > 0.01;
+  if (speed < -0.01) game.dino.facing = -1;
+  else if (speed > 0.01) game.dino.facing = 1;
+
+  if (game.bot) runBot(speed);
+  game.dino.update();
+
+  for (const o of game.obstacles) o.update(speed);
+  // Giữ vật cản trong danh sách tới khi cả "khoảng cách" phía sau nó cũng đã qua
+  game.obstacles = game.obstacles.filter((o) => o.x + o.w + o.gap > 0);
+  if (speed > 0) maybeSpawnObstacle();
+  game.groundX += speed;
+
+  handleCollisions();
+  if (game.state !== 'running') return;
+
+  // Mét do tự chạy (đi lùi thì trừ mét; phần được đẩy đã cộng trong updatePush)
+  addMeters(currentSpeed() * CONFIG.METERS_PER_PX * runDir);
+}
+
+/* ---------- Hạt hiệu ứng ---------- */
+function spawnParticles(x, y, count, colors, o = {}) {
+  const vx = o.vx || [-3, 3];
+  const vy = o.vy || [-4, -1];
+  const size = o.size || [2, 5];
+  for (let i = 0; i < count; i++) {
+    const life = Math.round((o.life || 40) * rand(0.7, 1.2));
+    game.particles.push({
+      x: x + rand(-1, 1) * (o.spreadX || 0),
+      y: y + rand(-1, 1) * (o.spreadY || 0),
+      vx: rand(vx[0], vx[1]),
+      vy: rand(vy[0], vy[1]),
+      g: o.gravity ?? 0.3,
+      size: rand(size[0], size[1]),
+      color: colors[randInt(0, colors.length - 1)],
+      life,
+      max: life,
+      rot: rand(0, Math.PI),
+    });
+  }
+  if (game.particles.length > 400) game.particles.splice(0, game.particles.length - 400);
+}
+
+function updateParticles() {
+  for (const p of game.particles) {
+    p.x += p.vx;
+    p.vy += p.g;
+    p.y += p.vy;
+    p.vx *= 0.98;
+    p.rot += 0.1;
+    p.life--;
+  }
+  game.particles = game.particles.filter((p) => p.life > 0);
+}
+
+/* ---------- Mây ---------- */
+function initClouds() {
+  for (let i = 0; i < 5; i++) {
+    game.clouds.push({ x: rand(0, W), y: rand(28, 150), s: rand(0.7, 1.25) });
+  }
+}
+function updateClouds() {
+  const drift = game.state === 'running' ? currentSpeed() * 0.12 : 0.25;
+  for (const cl of game.clouds) {
+    cl.x -= drift * cl.s;
+    if (cl.x < -120) {
+      cl.x = W + rand(20, 220);
+      cl.y = rand(28, 150);
+      cl.s = rand(0.7, 1.25);
+    }
+  }
+}
+
+/* ---------- Thông báo nổi trên màn hình game ---------- */
+function showToast(text, color = '#25f4ee') {
+  game.toasts.push({ text, color, life: 200, max: 200 });
+  if (game.toasts.length > 3) game.toasts.shift();
+}
+function updateToasts() {
+  for (const t of game.toasts) t.life--;
+  game.toasts = game.toasts.filter((t) => t.life > 0);
+}
+
+/* ======================================================================
+ * 9. VẼ KHUNG HÌNH
+ * ==================================================================== */
+function drawHills(offset, baseY, amp, color, f1, f2) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(-20, GROUND_Y + 2);
+  for (let x = -20; x <= W + 20; x += 12) {
+    const wx = x + offset;
+    const y = baseY - amp * (0.55 + 0.45 * Math.sin(wx * f1)) * (0.6 + 0.4 * Math.sin(wx * f2 + 1.7));
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W + 20, GROUND_Y + 2);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCloud(cl) {
+  ctx.save();
+  ctx.translate(cl.x, cl.y);
+  ctx.scale(cl.s, cl.s);
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  addEllipse(ctx, 0, 10, 28, 12);
+  addEllipse(ctx, 18, 4, 18, 15);
+  addEllipse(ctx, -14, 6, 14, 11);
+  addEllipse(ctx, 34, 12, 16, 9);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  sky.addColorStop(0, '#8fd3ff');
+  sky.addColorStop(1, '#fff1d6');
+  ctx.fillStyle = sky;
+  ctx.fillRect(-20, -20, W + 40, GROUND_Y + 22);
+
+  // Mặt trời
+  ctx.beginPath();
+  ctx.arc(W * 0.6, 70, 34, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 214, 102, 0.95)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(W * 0.6, 70, 48, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 214, 102, 0.25)';
+  ctx.fill();
+
+  for (const cl of game.clouds) drawCloud(cl);
+
+  // Đồi nhiều lớp (chạy chậm hơn mặt đất => hiệu ứng chiều sâu)
+  drawHills(game.groundX * 0.12, GROUND_Y - 34, 58, '#bfe6cf', 0.006, 0.013);
+  drawHills(game.groundX * 0.3, GROUND_Y - 6, 34, '#93d6ad', 0.011, 0.023);
+
+  // Mặt đất
+  ctx.fillStyle = '#f0d39a';
+  ctx.fillRect(-20, GROUND_Y, W + 40, H - GROUND_Y + 20);
+  ctx.fillStyle = '#c9a463';
+  ctx.fillRect(-20, GROUND_Y, W + 40, 3);
+
+  // Sỏi đá trôi theo tốc độ chạy
+  const TILE = 34;
+  const first = Math.floor(game.groundX / TILE);
+  for (let i = first; i < first + W / TILE + 2; i++) {
+    const h = hash01(i);
+    const x = i * TILE - game.groundX + h * 18;
+    const y = GROUND_Y + 9 + hash01(i * 7.13) * (H - GROUND_Y - 18);
+    ctx.fillStyle = h > 0.5 ? '#d8b679' : '#e3c58d';
+    ctx.fillRect(Math.round(x), Math.round(y), Math.round(3 + h * 7), 3);
+  }
+}
+
+function drawParticles() {
+  for (const p of game.particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** Nhãn hiệu ứng ở góc trên-trái. progress (0..1) = thanh thời gian còn lại */
+function drawBadge(x, y, emoji, text, accent, progress = null) {
+  ctx.font = `700 16px ${FONT_UI}`;
+  const w = ctx.measureText(text).width + 46;
+  const h = 32;
+  ctx.beginPath();
+  addRoundRect(ctx, x, y, w, h, 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.font = `18px ${FONT_EMOJI}`;
+  ctx.fillText(emoji, x + 9, y + h / 2 + 1);
+  ctx.font = `700 16px ${FONT_UI}`;
+  ctx.fillStyle = '#25313c';
+  ctx.fillText(text, x + 35, y + h / 2 + 2);
+
+  if (progress !== null) {
+    ctx.beginPath();
+    addRoundRect(ctx, x + 8, y + h - 6, Math.max(2, (w - 16) * Math.min(1, progress)), 3, 1.5);
+    ctx.fillStyle = accent;
+    ctx.fill();
+  }
+  return x + w + 8;
+}
+
+const ruleFor = (action) => GIFT_RULES.find((r) => r.action === action);
+
+function drawHUD() {
+  // ---- Góc phải: WIN + mét + thanh tiến độ tới mốc win ----
+  const boxW = 236;
+  const x0 = W - boxW - 14;
+  const y0 = 12;
+  ctx.beginPath();
+  addRoundRect(ctx, x0, y0, boxW, 60, 12);
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.fill();
+
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.font = `20px ${FONT_EMOJI}`;
+  ctx.fillText('🏆', x0 + 10, y0 + 21);
+  ctx.font = `800 ${22 + game.winPop * 0.35}px ${FONT_UI}`; // số win "nảy" lên khi thay đổi
+  ctx.fillStyle = game.wins < 0 ? '#e0364f' : '#25313c';
+  ctx.fillText(`${game.wins} WIN`, x0 + 38, y0 + 22);
+  ctx.textAlign = 'right';
+  ctx.font = `800 18px ${FONT_MONO}`;
+  ctx.fillStyle = '#25313c';
+  ctx.fillText(`${Math.floor(game.meters)}m`, x0 + boxW - 12, y0 + 22);
+
+  const bx = x0 + 12;
+  const bw = boxW - 24;
+  const by = y0 + 40;
+  ctx.beginPath();
+  addRoundRect(ctx, bx, by, bw, 10, 5);
+  ctx.fillStyle = '#e3e8ee';
+  ctx.fill();
+  const progress = Math.max(0, Math.min(1, game.meters / CONFIG.WIN_DISTANCE));
+  if (progress > 0) {
+    const grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    grad.addColorStop(0, '#3ddc84');
+    grad.addColorStop(1, '#ffc93c');
+    ctx.beginPath();
+    addRoundRect(ctx, bx, by, Math.max(10, bw * progress), 10, 5);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // ---- Góc trái: hiệu ứng đang có ----
+  let x = 16;
+  const y = 14;
+  const fx = game.effects;
+  if (game.push.remaining > 0) x = drawBadge(x, y, '🚀', `Đang đẩy +${Math.ceil(game.push.remaining)}m`, '#ff7a3d');
+  if (fx.helmet > 0) x = drawBadge(x, y, '⛑️', `Mũ ${Math.ceil(fx.helmet / CONFIG.FPS)}s`, '#ffb21e', fx.helmet / fx.helmetTotal);
+  if (game.dino.helmets > 0) x = drawBadge(x, y, '⛑️', 'Mũ bảo hiểm', '#ffb21e');
+  if (fx.superJump > 0) {
+    x = drawBadge(x, y, '🦘', `Nhảy cao ${Math.ceil(fx.superJump / CONFIG.FPS)}s`, '#2bb7e8', fx.superJump / fx.superJumpTotal);
+  }
+  if (fx.speedBoost > 0) {
+    x = drawBadge(x, y, '⚡', `Tăng tốc ${Math.ceil(fx.speedBoost / CONFIG.FPS)}s`, '#8b5cf6', fx.speedBoost / fx.speedBoostTotal);
+  }
+  if (game.bot) x = drawBadge(x, y, '🤖', 'BOT', '#64748b');
+  if (x < 140) {
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.font = `700 15px ${FONT_UI}`;
+    ctx.fillStyle = 'rgba(37, 49, 60, 0.75)';
+    ctx.fillText(`🟢 Quà GIÚP đẩy lên · 🔴 Quà PHÁ kéo lùi · ${CONFIG.WIN_DISTANCE}m = 1 WIN`, x + 2, 22);
+  }
+}
+
+/** Vệt gió khi đang được đẩy */
+function drawSpeedLines() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < 16; i++) {
+    const y = 60 + hash01(i * 3.7) * (GROUND_Y - 80);
+    const len = 50 + hash01(i * 9.1) * 90;
+    const x = W + 100 - ((game.frame * 38 + i * 173) % (W + 260));
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFloaters() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  for (const f of game.floaters) {
+    ctx.globalAlpha = Math.min(1, f.life / 25);
+    ctx.font = `800 ${f.size}px ${FONT_UI}`;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.strokeText(f.text, f.x, f.y);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** Vẽ vòng quay may mắn ở bên phải màn hình */
+function drawWheel() {
+  const w = game.wheel;
+  if (!w) return;
+  const cx = W - 135;
+  const cy = 222;
+  const r = 105;
+  const n = w.segs.length;
+  const slice = (Math.PI * 2) / n;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 9, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(20, 24, 33, 0.9)';
+  ctx.fill();
+
+  for (let i = 0; i < n; i++) {
+    const seg = w.segs[i];
+    const start = w.angle + i * slice;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, start + slice);
+    ctx.closePath();
+    // Ô trúng thưởng nhấp nháy sau khi dừng
+    const isWin = w.applied && i === w.index;
+    ctx.fillStyle = isWin && Math.floor(w.t / 6) % 2 === 0 ? '#ffffff' : wheelSegmentColor(seg, i);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + slice / 2);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = `800 13px ${FONT_UI}`;
+    ctx.fillStyle = isWin && Math.floor(w.t / 6) % 2 === 0 ? '#25313c' : '#ffffff';
+    ctx.fillText(wheelSegmentLabel(seg), r - 8, 1);
+    ctx.restore();
+  }
+
+  // Tâm bánh xe
+  ctx.beginPath();
+  ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#25313c';
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `22px ${FONT_EMOJI}`;
+  ctx.fillText(w.rule.emoji, cx, cy + 1);
+
+  // Kim chỉ ở đỉnh
+  ctx.beginPath();
+  ctx.moveTo(cx - 12, cy - r - 16);
+  ctx.lineTo(cx + 12, cy - r - 16);
+  ctx.lineTo(cx, cy - r + 8);
+  ctx.closePath();
+  ctx.fillStyle = '#ffc93c';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#25313c';
+  ctx.stroke();
+
+  // Tên người quay + kết quả
+  ctx.lineJoin = 'round';
+  ctx.font = `800 15px ${FONT_UI}`;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(20,24,33,0.85)';
+  const title = `@${shortName(w.sender)} quay${game.wheelQueue.length ? ` (+${game.wheelQueue.length} lượt chờ)` : ''}`;
+  // Giữ chữ nằm trong màn hình kể cả khi tên dài
+  const tx = Math.min(cx, W - 10 - ctx.measureText(title).width / 2);
+  ctx.strokeText(title, tx, cy - r - 28);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(title, tx, cy - r - 28);
+  if (w.applied) {
+    const seg = w.segs[w.index];
+    const label = `→ ${wheelSegmentLabel(seg)}`;
+    ctx.font = `800 22px ${FONT_UI}`;
+    ctx.lineWidth = 6;
+    ctx.strokeText(label, cx, cy + r + 24);
+    ctx.fillStyle = seg.type === 'meters' && seg.value < 0 ? '#ff5d6c' : '#3ddc84';
+    ctx.fillText(label, cx, cy + r + 24);
+  }
+  ctx.restore();
+}
+
+function drawToasts() {
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.font = `700 17px ${FONT_UI}`;
+  game.toasts.forEach((t, i) => {
+    const age = t.max - t.life;
+    const alpha = Math.min(1, age / 10, t.life / 30);
+    const yOff = Math.min(1, age / 10) * 8;
+    const text = t.text.length > 70 ? `${t.text.slice(0, 69)}…` : t.text;
+    const w = ctx.measureText(text).width + 34;
+    const x = W / 2 - w / 2;
+    const y = 50 + i * 38 + yOff;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    addRoundRect(ctx, x, y, w, 32, 16);
+    ctx.fillStyle = 'rgba(20, 24, 33, 0.85)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = t.color;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, W / 2, y + 17);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawCenterPanel(title, lines, accent = '#25313c') {
+  const boxW = 480;
+  const boxH = 64 + lines.length * 26;
+  const x = W / 2 - boxW / 2;
+  const y = 172; // nằm dưới vùng thông báo quà (tối đa 3 dòng)
+  ctx.beginPath();
+  addRoundRect(ctx, x, y, boxW, boxH, 18);
+  ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = accent;
+  ctx.font = `800 34px ${FONT_UI}`;
+  ctx.fillText(title, W / 2, y + 14);
+  ctx.fillStyle = '#4a5866';
+  ctx.font = `600 17px ${FONT_UI}`;
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, y + 60 + i * 26));
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.save();
+  if (game.shake > 0) ctx.translate(rand(-1, 1) * game.shake, rand(-1, 1) * game.shake * 0.6);
+  drawBackground();
+  drawWarp();
+  for (const o of game.obstacles) {
+    if (!o.destroyed && o.x < W + 10 && o.x + o.w > -10) o.draw(ctx);
+  }
+  if (game.push.remaining > 0 && (game.push.tier || 1) < 3) drawSpeedLines();
+  drawRings();
+  drawTrail();
+  drawHelper();
+  game.dino.draw(ctx);
+  drawBully();
+  drawParticles();
+  drawFloaters();
+  ctx.restore();
+
+  drawHUD();
+  drawPushBanner();
+  drawManualHint();
+  drawWheel();
+  drawCinematic();
+  drawToasts();
+  if (game.flash > 0) {
+    ctx.fillStyle = `rgba(${game.flashColor}, ${Math.min(0.85, game.flash / 40)})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (game.cine) {
+    // đang chiếu cảnh điện ảnh => ẩn bảng Sẵn sàng / Game Over
+  } else if (game.state === 'ready') {
+    drawCenterPanel('Sẵn sàng!', ['Nhấn SPACE / ↑ hoặc chạm màn hình để bắt đầu', 'Người xem tặng quà để giúp (hoặc phá) khủng long!']);
+  } else if (game.state === 'over') {
+    const lines = [CONFIG.DEATH_WIN_PENALTY ? `Mất hết mét và -${CONFIG.DEATH_WIN_PENALTY} win!` : 'Mất hết mét!'];
+    if (CONFIG.AUTO_RESTART_SECONDS > 0) {
+      const left = Math.max(0, Math.ceil(CONFIG.AUTO_RESTART_SECONDS - game.overFrames / CONFIG.FPS));
+      lines.push(`Tự chơi lại sau ${left}s`);
+    }
+    const reviveRule = ruleFor('revive');
+    if (reviveRule) lines.push(`Tặng ${reviveRule.emoji} ${reviveRule.names[0]} để HỒI SINH ngay!`);
+    drawCenterPanel('GAME OVER', lines, '#e0364f');
+  }
+}
+
+/** Vòng lặp: logic cố định 60 bước/giây, vẽ theo tần số màn hình */
+const STEP_MS = 1000 / CONFIG.FPS;
+let lastTime = performance.now();
+let accumulator = 0;
+function loop(now) {
+  accumulator += Math.min(now - lastTime, 250); // tránh "nhảy cóc" khi tab bị ẩn lâu
+  lastTime = now;
+  while (accumulator >= STEP_MS) {
+    update();
+    accumulator -= STEP_MS;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ======================================================================
+ * 13. HIỆU ỨNG ĐIỆN ẢNH: +WIN / -WIN / NUKE
+ *     queueCinematic('win' | 'lose' | 'nuke', data) – các cảnh chạy lần lượt.
+ *     Trong lúc chiếu cảnh, khủng long húc vỡ mọi vật cản (không chết oan).
+ *     Riêng NUKE: đóng băng thế giới game cho tới khi hết cảnh.
+ * ==================================================================== */
+const CINE_DUR = { win: 210, lose: 170, nuke: 440 };
+const NUKE_IMPACT = 110; // khung hình tên lửa chạm đất
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const easeOutCubic = (k) => 1 - Math.pow(1 - k, 3);
+const easeOutBack = (k) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+};
+
+function queueCinematic(type, data = {}) {
+  const q = game.cineQueue;
+  const last = q[q.length - 1];
+  // Gộp các +win / -win liên tiếp đang chờ thành 1 cảnh
+  if (last && last.type === type && type !== 'nuke') {
+    last.data.amount += data.amount || 0;
+    if (data.label) last.data.label = data.label;
+    return;
+  }
+  if (q.length < 20) q.push({ type, data });
+}
+
+function startCinematic(item) {
+  const c = { type: item.type, data: item.data, t: 0, dur: CINE_DUR[item.type], freeze: item.type === 'nuke' };
+  if (item.type === 'win') c.big = item.data.amount >= 10;
+  if (item.type === 'lose') {
+    c.big = item.data.amount <= -10;
+    if (c.big) c.dur += 80; // thêm màn máy bay ném bom
+    c.cracks = makeCracks(W / 2, 170);
+    c.bombs = [];
+    c.jetX = -200;
+  }
+  if (item.type === 'nuke') c.puffs = makePuffs();
+  game.cine = c;
+}
+
+function updateCinematic() {
+  if (!game.cine) {
+    const next = game.cineQueue.shift();
+    if (!next) return;
+    startCinematic(next);
+  }
+  const c = game.cine;
+  c.t++;
+  if (c.type === 'win') updateWinCine(c);
+  else if (c.type === 'lose') updateLoseCine(c);
+  else updateNukeCine(c);
+  if (c.t >= c.dur) {
+    game.cine = null;
+    // Hết cảnh: dọn vật cản sát khủng long + 0.5s an toàn để không chết oan
+    for (const o of game.obstacles) {
+      if (!o.destroyed && 
